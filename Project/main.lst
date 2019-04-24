@@ -1,0 +1,428 @@
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN ..\User\obj\main.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\User\src\main.c LARGE BROWSE INCDIR(..\FwLib\Include;..\User\inc) DEFINE
+                    -(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\main.lst) OBJECT(..\User\obj\main.obj)
+
+line level    source
+
+   1          /******************************************************************************
+   2          **                           志和兴业有限公司
+   3          **
+   4          **                           
+   5          **
+   6          **--------------基本文件信息---------------------------------------------------
+   7          ** 文   件   名 : main.c
+   8          ** 当前    版本 : V1.0 
+   9          ** 描        述 : 太阳能泛光灯控制器
+  10          ** 编   译   器 : xc8
+  11          ** 硬        件 : 太阳能泛光灯控制器
+  12          **--------------历史版本信息---------------------------------------------------
+  13          ** 开始创建日期 : 2018-09-20
+  14          ** 创   建   人 : 蔡维凯
+  15          ** 版        本 : V1.0
+  16          ** 描　      述 : 
+  17          
+  18          **-----------------------------------------------------------------------------
+  19          *******************************************************************************/
+  20          /*
+  21          更改记录：邢    20181206
+  22          更改原因：取消开灯闪一下的问题   在262行以后的位置
+  23          /* Includes ------------------------------------------------------------------*/
+  24          #include "N76E003.h"
+  25          #include "SFR_Macro.h"
+  26          #include "Function_define.h"
+  27          #include "Common.h"
+  28          
+  29          #include "stdio.h"
+  30          #include "string.h"
+  31          
+  32          
+  33          #include "userdefine.h"
+  34          
+  35          //**--------------全局变量-----------------------------------------------------
+  36          unsigned long sys_clk_freq=0 ;   //系统时钟频率
+  37          unsigned char handle_scan_key_flag=0;
+  38          unsigned int  have_person1_time_count=0;
+  39          unsigned char have_person1_flag=0;
+  40          unsigned char scan_key_time_count=0;
+  41          
+  42          unsigned char run_index=0x00;
+  43          //**--------------宏定义-------------------------------------------------------
+  44          
+  45          //**--------------函数申明-----------------------------------------------------
+  46          
+  47          //**--------------函数定义-----------------------------------------------------
+  48          
+  49          
+  50          
+  51          
+  52          
+  53          /***********************************************************************
+  54                  WDT CONFIG enable 
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 2   
+
+  55                  warning : this macro is only when ICP not enable CONFIG WDT function
+  56                  copy this marco code to you code to enable WDT reset.
+  57          ************************************************************************/
+  58          void Check_WDT_Reset_Config(void)
+  59          {
+  60   1                      set_IAPEN;
+  61   1                      IAPAL = 0x04;
+  62   1                      IAPAH = 0x00;   
+  63   1                      IAPFD = 0xFF;
+  64   1                      IAPCN = 0xC0;                                           //Read config command
+  65   1                      set_IAPGO;  
+  66   1                      if ((IAPFD&0xF0)==0xF0)
+  67   1                      {
+  68   2                              IAPFD = 0x0F;
+  69   2                              IAPCN = 0xE1;
+  70   2                      set_IAPGO;                                                                      //trigger IAP
+  71   2                              while((CHPCON&SET_BIT6)==SET_BIT6);          //check IAPFF (CHPCON.6)
+  72   2                              clr_CFUEN;
+  73   2                              clr_IAPEN;
+  74   2                              EA = 0;
+  75   2                              TA = 0xAA;
+  76   2                              TA = 0x55;
+  77   2                              CHPCON &= 0xFD;
+  78   2                              TA = 0xAA;
+  79   2                              TA = 0x55;
+  80   2                              CHPCON |= 0x80;
+  81   2                      }
+  82   1                      clr_IAPEN;
+  83   1      }
+  84          
+  85          /**********************************************************************
+  86          *函数名称：init_osc
+  87          *描述：
+  88          *1.系统时钟配置：16MHz
+  89          *2.看门狗设置 ：1.02秒
+  90          *返回类型：void
+  91          *输入形参：void
+  92          ***********************************************************************/
+  93          void init_osc(void)
+  94          {
+  95   1        //---------------------------HIRC enable part                
+  96   1        set_HIRCEN;                                                                                           //step1: enable HIRC clock source run
+  97   1        while((CKSWT&SET_BIT5)==0);                                                           //step2: check ready
+  98   1        clr_OSC1;                                                                                                     //step3: switching system clock source if needed
+  99   1        clr_OSC0;
+ 100   1        while((CKEN&SET_BIT0)==1);                                                            //step4: check system clock switching OK or NG
+ 101   1        
+ 102   1        //---------------------------使能看门狗 1.638s
+ 103   1        Check_WDT_Reset_Config();
+ 104   1              
+ 105   1        TA=0xAA;TA=0x55;WDCON|=0x07;                                              //Setting WDT prescale 
+ 106   1        set_WDCLR;                                                                                    //Clear WDT timer
+ 107   1        while((WDCON|~SET_BIT6)==0xFF);                                       //confirm WDT clear is ok before into power down mode
+ 108   1       
+ 109   1                      
+ 110   1        IE    =       0x00;                                   
+ 111   1        EIE   =       0x00;
+ 112   1        EIE1  =       0x00;
+ 113   1        TCON  =       0x00;
+ 114   1        
+ 115   1        delay_ms(100);//等待系统电源稳定
+ 116   1      }
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 3   
+
+ 117          
+ 118          
+ 119          
+ 120          
+ 121          
+ 122          
+ 123          /**********************************************************************
+ 124          *函数名称：init_port
+ 125          *描述：端口初始化
+ 126          *返回类型：void
+ 127          *输入形参：void
+ 128          ***********************************************************************/
+ 129          void init_port(void)
+ 130          {
+ 131   1              Set_All_GPIO_Quasi_Mode;
+ 132   1      
+ 133   1                      P05_PushPull_Mode;clr_P05;  //P0.5  CH_EN        充电MOS管控制端口
+ 134   1                      CHARGE_ON;
+ 135   1                      P06_Input_Mode;                 //AIN3--AN1  温度采样
+ 136   1                      P07_Input_Mode;                         //AIN2--AN2      光伏板电压采样
+ 137   1      
+ 138   1                      P15_PushPull_Mode;                      //P15 PWM    LED升压驱动  推挽输出低电平
+ 139   1                      clr_P15; 
+ 140   1                      
+ 141   1                      P04_Input_Mode;                         //AIN5--AN4       输出电压
+ 142   1                      P03_Input_Mode;                 //AIN6--AN12  电池电压
+ 143   1      
+ 144   1                      P01_Input_Mode;                         //P0.1  过载保护  下降沿中断  DLBH
+ 145   1                      
+ 146   1                      Enable_INT_Port0;                       //管脚中断通道1 端口00--P0.1
+ 147   1                      Enable_BIT1_FallEdge_Trig;  //下降沿触发中断
+ 148   1                      
+ 149   1      
+ 150   1                      P11_Input_Mode;                         //P1.1--AIN7--AN10  LED负载电流采样
+ 151   1      
+ 152   1                      P12_Input_Mode;                         //P1.2
+ 153   1                       
+ 154   1                      Enable_INT_Port1;                       //管脚中断通道2 端口01--P1.2
+ 155   1                      Enable_BIT2_FallEdge_Trig;  //P1.2   IRD_IN  红外遥控器
+ 156   1                             
+ 157   1      
+ 158   1              P13_Input_Mode;                         //P1.3  人体检测
+ 159   1      
+ 160   1                      P14_PushPull_Mode;                      //P1.4  LED_OUT  放电MOS管控制
+ 161   1              clr_P14;
+ 162   1              
+ 163   1      }
+ 164          
+ 165          
+ 166          
+ 167          
+ 168          /**********************************************************************
+ 169          *函数名称：driver_init
+ 170          *描述：驱动层初始化
+ 171          *返回类型：void
+ 172          *输入形参：void
+ 173          ***********************************************************************/
+ 174          void driver_init(void)
+ 175          {
+ 176   1          init_osc();         //系统时钟配置
+ 177   1                      
+ 178   1          init_port();        //IO端口及外设端口初始化
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 4   
+
+ 179   1              
+ 180   1          init_timer3();      //初始化定时器TIMER3  系统时基定时器  1ms
+ 181   1              
+ 182   1          Init_Time1_IRD();   //初始化定时器TIME1  红外遥控器
+ 183   1              
+ 184   1          Init_Ird();                 //初始化红外接受端口
+ 185   1              
+ 186   1          init_adc();         //初始化adc
+ 187   1              
+ 188   1          init_pwm();         //初始化pwm
+ 189   1                              
+ 190   1      }
+ 191          
+ 192          
+ 193          
+ 194          
+ 195          /**********************************************************************
+ 196          *函数名称：middle_init
+ 197          *描述：中间层初始化
+ 198          *返回类型：void
+ 199          *输入形参：void
+ 200          ***********************************************************************/
+ 201          void middle_init(void)
+ 202          {               
+ 203   1          read_param_eeprom();  //读取系统参数   
+ 204   1              
+ 205   1      }
+ 206          
+ 207          
+ 208          /**********************************************************************
+ 209          *函数名称：application_init
+ 210          *描述：应用层初始化
+ 211          *返回类型：void
+ 212          *输入形参：void
+ 213          ***********************************************************************/
+ 214          void application_init(void)
+ 215          {
+ 216   1              
+ 217   1              system_check_time=0x01;
+ 218   1              
+ 219   1              //open_an0_time=0x01;
+ 220   1              
+ 221   1              open_an1_time=0x01;                     //环境温度检测
+ 222   1              
+ 223   1              open_an2_time=0x01;                     //太阳能电池板电压检测
+ 224   1              
+ 225   1              open_an3_time=0x01;                     //电池电压检测
+ 226   1              
+ 227   1              open_an4_time=0x01;                     //输出电压检测
+ 228   1              
+ 229   1              //open_an9_time=0x01;                   //充电电流检测
+ 230   1              
+ 231   1              open_an10_time=0x01;                    //放电电流检测
+ 232   1                                      
+ 233   1          
+ 234   1          //放电恒流PID调节
+ 235   1          pid_init ( &PID_CC_discharge);
+ 236   1              
+ 237   1          PID_CC_discharge.Proportion = 0.001;                 // 比例常数 Proportional Const
+ 238   1          
+ 239   1              PID_CC_discharge.Integral   = 0;                     // 积分常数 Integral Const
+ 240   1                                                                                          
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 5   
+
+ 241   1              PID_CC_discharge.Derivative = 0;                     // 微分常数 Derivative Const
+ 242   1                                                                                          
+ 243   1              PID_CC_discharge.SetPoint   = ((load_cc_I*150)/1000)*819.2;               // 设定目标 Desired value 330mA
+             -  
+ 244   1          
+ 245   1          open_discharge_time=0x00;
+ 246   1          
+ 247   1          ms_cnt=0x00;                                                
+ 248   1              se_cnt=0x00;                                            
+ 249   1              mi_cnt=0x00;                                            
+ 250   1              ho_cnt=0x00;
+ 251   1              //--------------------------------------------
+ 252   1              run_index=0x00;
+ 253   1              //----------------------即将进入主循环前的操作          
+ 254   1          set_WDTR;                      //开启开门狗
+ 255   1          set_TR3;              //启用时基定时器Timer3 Tsys=1ms    
+ 256   1          set_EPI;              //外部管脚中断  
+ 257   1              clr_PIF1;                         
+ 258   1              PIF=0x00;                         
+ 259   1              clr_T1M;
+ 260   1          EA=1;;               //使能CPU全局中断
+ 261   1      
+ 262   1      //      if(run_index==0x00)
+ 263   1      //      {
+ 264   1      //              Disable_Bost_Pwm();                     //禁止升压启动
+ 265   1      //              LOAD_OUT_DISABLE;                         // LED负载关断
+ 266   1      //
+ 267   1      //              battery_voltage_value=start_ad_convert(AN3_CHANNEL);            //电池电压采样  开始充电之前判断是否有电池接入，
+             -如果没有或者电压低于一定值直接跳过闪灯 2018.12.06
+ 268   1      //
+ 269   1      //              if(battery_voltage_value>((10.60/31.04)*819.2))
+ 270   1      //              {
+ 271   1      //                      CHARGE_ON;                                 //充电闭合
+ 272   1      //
+ 273   1      //                      Set_Bost_Pwm_Duty(0);                                                                                                                                           
+ 274   1      //                      LOAD_OUT_ENABLE;                  // LED负载开启
+ 275   1      //                                                                                                                                                                                                                                                                                      
+ 276   1      //                      Enable_Bost_Pwm();                                                                                                                                                                                                                                                                                              
+ 277   1      //                      Set_Bost_Pwm_Duty(3);   
+ 278   1      //                      delay_ms(800);  
+ 279   1      //                      battery_voltage_value=start_ad_convert(AN3_CHANNEL);            //电池电压采样
+ 280   1      //                      if(battery_voltage_value>((10.60/31.04)*819.2)) 
+ 281   1      //                      {
+ 282   1      //                              Set_Bost_Pwm_Duty(0);                                                                                                                                           
+ 283   1      //                              LOAD_OUT_ENABLE;                  // LED负载开启
+ 284   1      //                                                                                                                                                                                                                                                                                              
+ 285   1      //                              Enable_Bost_Pwm();                                                                                                                                                                                                                                                                                              
+ 286   1      //                              Set_Bost_Pwm_Duty(15);  
+ 287   1      //                              delay_ms(2000);                                                                                                         
+ 288   1      //                              Set_Bost_Pwm_Duty(0);
+ 289   1      //                      }
+ 290   1      //                      else
+ 291   1      //                       {
+ 292   1      //                              delay_ms(2000);
+ 293   1      //                              Set_Bost_Pwm_Duty(0);
+ 294   1      //                       }
+ 295   1      //      
+ 296   1      ////                    battery_voltage_value=start_ad_convert(AN3_CHANNEL);                    //电池电压采样                                                                                                                          
+ 297   1      ////                    Disable_Bost_Pwm();                     //禁止升压启动
+ 298   1      ////                    LOAD_OUT_DISABLE;                         // LED负载关断
+ 299   1      ////                    if(battery_voltage_value>((10.60/31.04)*819.2))
+ 300   1      ////                    {
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 6   
+
+ 301   1      ////                        Set_Bost_Pwm_Duty(0);                                                                                                                                               
+ 302   1      ////                            LOAD_OUT_ENABLE;                  // LED负载开启
+ 303   1      ////                                                                                                                                                                                                                                                                                            
+ 304   1      ////                            Enable_Bost_Pwm();                                                                                                                                                                                                                                                                                              
+ 305   1      ////                            Set_Bost_Pwm_Duty(25);  
+ 306   1      ////                            delay_ms(3500);                                                                                                         
+ 307   1      ////                            Set_Bost_Pwm_Duty(0);
+ 308   1      ////                    }
+ 309   1      ////                    else
+ 310   1      ////                    {
+ 311   1      ////                            Set_Bost_Pwm_Duty(0);                                                                                                                                           
+ 312   1      ////                            LOAD_OUT_ENABLE;                  // LED负载开启
+ 313   1      ////                                                                                                                                                                                                                                                                                            
+ 314   1      ////                            Enable_Bost_Pwm();                                                                                                                                                                                                                                                                                              
+ 315   1      ////                            Set_Bost_Pwm_Duty(5);   
+ 316   1      ////                            delay_ms(2000);                                                                                                         
+ 317   1      ////                            Set_Bost_Pwm_Duty(0);
+ 318   1      ////                    }
+ 319   1      //              }
+ 320   1      //                              
+ 321   1      //              Disable_Bost_Pwm();
+ 322   1      //              LOAD_OUT_DISABLE;
+ 323   1      //              Set_Bost_Pwm_Duty(0); 
+ 324   1      //              set_WDCLR;
+ 325   1      //              run_index=0x01;
+ 326   1      //      }               
+ 327   1      
+ 328   1       
+ 329   1      }
+ 330          
+ 331          /*---------------------------------------------------------------------
+ 332          *函数名称：main
+ 333          *描述：
+ 334          *返回类型：int
+ 335          *输入形参：void
+ 336          ---------------------------------------------------------------------*/
+ 337          void main(void) 
+ 338          {
+ 339   1          driver_init();                      // 驱动层初始化
+ 340   1          
+ 341   1          middle_init();                      // 中间层初始化
+ 342   1          
+ 343   1          application_init();         // 应用层初始化
+ 344   1      
+ 345   1      
+ 346   1                        
+ 347   1          while(1)
+ 348   1          {
+ 349   2              set_WDCLR;              // 喂狗  
+ 350   2                        
+ 351   2              if(handle_scan_key_flag==0x01)
+ 352   2              {                       
+ 353   3                  if(PERSON_CHECK1)
+ 354   3                  {
+ 355   4                    have_person1_time_count=0x00;
+ 356   4                                    
+ 357   4                    have_person1_flag=0x01;
+ 358   4                  }
+ 359   3                                    
+ 360   3                  handle_scan_key_flag=0x00;
+ 361   3              }
+ 362   2                        
+C51 COMPILER V9.01   MAIN                                                                  03/26/2019 10:13:40 PAGE 7   
+
+ 363   2              if(ird_receive_flag==0x01)
+ 364   2              {          
+ 365   3                  Key_Menu(ird_data);
+ 366   3                  
+ 367   3                  receive_bit_count=0x00;
+ 368   3                      
+ 369   3                  ird_status=0x00;
+ 370   3                      
+ 371   3                  ird_data=0x00;
+ 372   3      
+ 373   3                              clr_TR1;   //停止计数
+ 374   3                      
+ 375   3                  TL1=0x00;
+ 376   3                              TH1=0x00;//定时器清零    
+ 377   3                                              
+ 378   3                  clr_TF1;            
+ 379   3                      
+ 380   3                  ird_receive_flag=0x00;                                                                         
+ 381   3               }
+ 382   2                                   
+ 383   2                        
+ 384   2                handle_ad_loop();
+ 385   2                        
+ 386   2                handle_task_process();
+ 387   2                        
+ 388   2          }
+ 389   1              
+ 390   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    736    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     10    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

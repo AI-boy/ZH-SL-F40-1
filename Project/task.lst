@@ -1,0 +1,1403 @@
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE TASK
+OBJECT MODULE PLACED IN ..\User\obj\task.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\User\src\task.c LARGE BROWSE INCDIR(..\FwLib\Include;..\User\inc) DEFINE
+                    -(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\task.lst) OBJECT(..\User\obj\task.obj)
+
+line level    source
+
+   1          
+   2          
+   3          #include "N76E003.h"
+   4          #include "SFR_Macro.h"
+   5          #include "Function_define.h"
+   6          #include "Common.h"
+   7          #include "stdio.h"
+   8          #include "string.h"
+   9          
+  10          
+  11          #include "userdefine.h"
+  12          
+  13          
+  14          
+  15          
+  16          
+  17          unsigned char system_status=0x00;
+  18          
+  19          unsigned char system_check_time=0x00;
+  20          
+  21          unsigned int system_time_count=0x00;
+  22          
+  23          unsigned char work_mode=0x00;
+  24          
+  25          
+  26          unsigned char pv_voltage_status=0x00;                   //¹â·ü°åµçÑ¹×´Ì¬
+  27          
+  28          unsigned char battery_voltage_status=0x00;              //µç³ØµçÑ¹×´Ì¬
+  29          
+  30          unsigned char load_voltage_status=0x00;                 //¸ºÔØ¶Ë×´Ì¬
+  31          
+  32          unsigned char discharge_index=0x00;                     //·Åµç½×¶Î±äÁ¿
+  33          
+  34          unsigned char charge_index=0x00;                                //³äµç½×¶Î±äÁ¿
+  35          
+  36          unsigned char nop_index=0x00;
+  37          
+  38          unsigned int involid_time_count=0x00;
+  39          
+  40          unsigned int cv_level_time_count=0x00;
+  41          
+  42          unsigned int load_short_time_count=0x00;                //Êä³ö¶ÌÂ·¼ì²â±äÁ¿
+  43          
+  44          unsigned int load_open_time_count=0x00;                 //Êä³ö¿ªÂ·¼ì²â±äÁ¿
+  45          
+  46          unsigned int over_load_time_count=0x00;
+  47          
+  48          unsigned int battery_low_time_count=0x00;
+  49          
+  50          
+  51          unsigned long int night_time_count=0x00;
+  52                                                  
+  53          unsigned long int  day_time_count=0x00;
+  54          
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 2   
+
+  55          unsigned long int pv_time_count=0x00;
+  56          
+  57          unsigned long int light_time_level=0x00;
+  58          
+  59          
+  60          
+  61          
+  62          float PWM       =       0;
+  63          
+  64          float PWM_I=    0;
+  65          
+  66          unsigned char mppt_status=0x00;
+  67          
+  68          unsigned int mppt_time_count=0x00;
+  69          
+  70          unsigned char temper_time_count=0x00;
+  71          
+  72          unsigned char over_temper_time_count=0x00;
+  73                                                  
+  74          unsigned char sys_temper_flag=0x01;
+  75          
+  76          unsigned char charge_led_status=0x00;
+  77          
+  78          unsigned char bt_led_status=0x00;
+  79          
+  80          unsigned char discharge_led_status=0x00;
+  81          
+  82          unsigned char bt_time_count=0x00;
+  83          
+  84          unsigned char pv_index=0x00;
+  85          
+  86          unsigned char Adjust_Pout_Flag=0x00;
+  87          
+  88          unsigned char voltage_adjust_index=0x01;
+  89          
+  90          unsigned char limit_power_pid_flag=0x00;
+  91          
+  92          unsigned char t1=0x00;
+  93          unsigned char t2=0x00;
+  94          unsigned char t3=0x00;
+  95          unsigned char t4=0x00;
+  96          unsigned char t5=0x00;
+  97          
+  98          float bt_prev=0.0;
+  99          
+ 100          unsigned char mcu_t00_time_count=0x00;
+ 101          unsigned char mcu_t01_time_count=0x00;
+ 102          unsigned char mcu_t02_time_count=0x00;
+ 103          unsigned char mcu_t03_time_count=0x00;
+ 104          unsigned char mcu_temp_index=0x00;
+ 105          
+ 106          unsigned char pid_index=0x00;
+ 107          
+ 108          unsigned int index_01_count=0x00;
+ 109          unsigned int index_02_count=0x00;
+ 110          unsigned int index_03_count=0x00;
+ 111          unsigned int index_04_count=0x00;
+ 112          unsigned int index_05_count=0x00;
+ 113          unsigned int index_06_count=0x00;
+ 114          
+ 115          float  x_v=0.0;
+ 116          
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 3   
+
+ 117          float  y_v=0.0;
+ 118          
+ 119          
+ 120          /**********************************************************************
+ 121          *º¯ÊýÃû³Æ£ºhandle_ad_loop
+ 122          *ÃèÊö£ºADÂÖÑµ²ÉÑù
+ 123          *·µ»ØÀàÐÍ£ºvoid
+ 124          *ÊäÈëÐÎ²Î£ºvoid
+ 125          ***********************************************************************/
+ 126          void handle_ad_loop(void)
+ 127          {
+ 128   1              float data_cc_var;
+ 129   1                      //------------------------------------------------------------------------------------------------------
+             -------------------------------------------------
+ 130   1                      if(handle_an0_process_flag==0x01)
+ 131   1                      {                                                               
+ 132   2                              handle_an0_process_flag=0x00;                                           
+ 133   2                      }               
+ 134   1                      //------------------------------------------------------------------------------------------------------
+             -------------------------------------------------
+ 135   1                      if(handle_an1_process_flag==0x01)
+ 136   1                      {
+ 137   2                      
+ 138   2                              temperature_value=start_ad_convert(AN1_CHANNEL);                //²ÉÑùÍ¨µÀÑ¡Ôñ  AN1             »·¾³ÎÂ¶È  -30¡æ--3      70¡æ--6
+             -00
+ 139   2                              
+ 140   2                              if((temperature_value>3)&&(temperature_value<492))      //Õý³£¹¤×÷ÎÂ¶È·¶Î§£º-30¡æ---70¡æ
+ 141   2                              {
+ 142   3                                      temper_time_count++;
+ 143   3                                      
+ 144   3                                      over_temper_time_count=0x00;
+ 145   3                                      
+ 146   3                                      if(temper_time_count>=10)
+ 147   3                                      {
+ 148   4                                              temper_time_count=0x00;
+ 149   4                                              
+ 150   4                                              sys_temper_flag=0x01;                                           //ÏµÍ³¹¤×÷ÎÂ¶ÈÕý³£
+ 151   4                                      }       
+ 152   3                              }
+ 153   2                              else
+ 154   2                              {
+ 155   3                                      over_temper_time_count++;
+ 156   3                                      
+ 157   3                                      temper_time_count=0x00;
+ 158   3                                      
+ 159   3                                      if(over_temper_time_count>=10)
+ 160   3                                      {
+ 161   4                                              over_temper_time_count=0x00;
+ 162   4                                              
+ 163   4                                              sys_temper_flag=0x00;                                           //³¬³öÏµÍ³Õý³£¹¤×÷ÎÂ¶È·¶Î§
+ 164   4                                      }
+ 165   3                              }
+ 166   2                              
+ 167   2                              handle_an1_process_flag=0x00;
+ 168   2                                                      
+ 169   2                      }
+ 170   1                      //------------------------------------------------------------------------------------------------------
+             ----------------- 
+ 171   1                      if(handle_an2_process_flag==0x01)
+ 172   1                      {
+ 173   2                              pv_voltage_value=start_ad_convert(AN2_CHANNEL);  //²ÉÑùÍ¨µÀÑ¡Ôñ AN2¹â·ü°åµçÑ¹  ·ÖÑ¹µç×èËõ¼õ±ÈÀý 1:61 
+ 174   2                              battery_voltage_value=start_ad_convert(AN3_CHANNEL); 
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 4   
+
+ 175   2                              x_v = (float)pv_voltage_value/819.2;
+ 176   2                              y_v = ((float)battery_voltage_value/819.2)*31.04;
+ 177   2                              if(y_v>x_v)
+ 178   2                              {
+ 179   3                                      y_v = ((float)battery_voltage_value/819.2)*31.04-x_v;
+ 180   3                                      y_v =  y_v/100.0;       //Ö§Â·µçÁ÷1
+ 181   3                                      x_v =  x_v/24.9;        //Ö§Â·µçÁ÷2
+ 182   3                                      if(y_v>=x_v)
+ 183   3                                      {
+ 184   4                                              x_v =  y_v-x_v;  //Ö§Â·µçÁ÷3
+ 185   4                                              
+ 186   4                                              x_v =  x_v*100.0;
+ 187   4                                              
+ 188   4                                              y_v = (float)pv_voltage_value/819.2;
+ 189   4                                              
+ 190   4                                              x_v = y_v-x_v;   //TYNB-        !!!!!!
+ 191   4                                              
+ 192   4                                              y_v = ((float)battery_voltage_value/819.2)*31.04;
+ 193   4                                              
+ 194   4                                              y_v = y_v-x_v; //(YNB+)-(YNB-)=PV
+ 195   4                                              if(y_v<0)
+ 196   4                                              {
+ 197   5                                                      y_v=0  ;
+ 198   5                                              }
+ 199   4                                      }
+ 200   3                                      else
+ 201   3                                      {
+ 202   4                                              x_v = x_v-y_v;
+ 203   4                                              
+ 204   4                                              x_v =  x_v*100.0;
+ 205   4      
+ 206   4                                              y_v = (float)pv_voltage_value/819.2;
+ 207   4                                              
+ 208   4                                              x_v = y_v+x_v;   //TYNB-         !!!!!!
+ 209   4                                              
+ 210   4                                              y_v = ((float)battery_voltage_value/819.2)*31.04;
+ 211   4                                              
+ 212   4                                              y_v = y_v-x_v; //(YNB+)-(YNB-)=PV
+ 213   4                                              
+ 214   4                                              if(y_v<0)
+ 215   4                                              {
+ 216   5                                                      y_v=0;
+ 217   5                                              }       
+ 218   4                                      }                               
+ 219   3              
+ 220   3                                      pv_voltage_value = (y_v/61.0)*819.2;
+ 221   3                              }
+ 222   2                              else
+ 223   2                              {
+ 224   3                                      pv_voltage_value = (61.0/61.0)*819.2;   
+ 225   3                              }
+ 226   2                              
+ 227   2      
+ 228   2      
+ 229   2                              
+ 230   2                              if(pv_index==0x00)
+ 231   2                              {
+ 232   3                                      if(pv_voltage_value<=light_on_pv_level)   //¼ø±ð°×ÌìºÍºÚÒ¹   Í¨¹ý¹â·ü°åµçÑ¹¼ì²â   1V---12V
+ 233   3                                      {                                                                                                                                                                                               
+ 234   4                                              night_time_count++;
+ 235   4                                              
+ 236   4                                              day_time_count=0x00;
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 5   
+
+ 237   4                                              
+ 238   4                                              if(night_time_count>light_time_level)  
+ 239   4                                              {
+ 240   5                                                      night_time_count=0x00;
+ 241   5                                                      
+ 242   5                                                      pv_voltage_status=0x02;                 //½øÈë·ÅµçÄ£Ê½
+ 243   5                                                      
+ 244   5                                              }
+ 245   4                                                      
+ 246   4                                      }
+ 247   3                                      else if((pv_voltage_value>(light_off_pv_level))) 
+ 248   3                                      {
+ 249   4                                              day_time_count++;
+ 250   4                                              
+ 251   4                                              night_time_count=0x00;
+ 252   4                                              
+ 253   4                                              if(day_time_count>light_time_level)
+ 254   4                                              {
+ 255   5                                                      day_time_count=0x00;
+ 256   5                                                      
+ 257   5                                                      pv_voltage_status=0x00;  //¿ÕÏÐ×´Ì¬
+ 258   5                                                                                                      
+ 259   5                                              }                               
+ 260   4                                      }
+ 261   3                                      else
+ 262   3                                      {
+ 263   4                                              day_time_count=0x00;
+ 264   4                                              
+ 265   4                                              night_time_count=0x00;
+ 266   4                                      }
+ 267   3                              }
+ 268   2                              
+ 269   2                              if((pv_voltage_value>=light_off_pv_level)&&(pv_voltage_value<402))      //18V 1.8A  ¹â·ü°åµçÑ¹·¶Î§<30V
+ 270   2                              {                                                                                                                                                       
+ 271   3                                      pv_time_count++;
+ 272   3                                                                                                      
+ 273   3                                      if(pv_time_count>light_time_level)
+ 274   3                                      {
+ 275   4                                              pv_time_count=0x00;
+ 276   4                                                              
+ 277   4                                              pv_voltage_status=0x01;                         //½øÈë³äµçÄ£Ê½
+ 278   4                                              
+ 279   4                                              day_time_count=0x00;  
+ 280   4                                              
+ 281   4                                              night_time_count=0x00; 
+ 282   4                                              
+ 283   4                                              pv_index=0x01;                                                                          
+ 284   4                                                              
+ 285   4                                      }                               
+ 286   3                                                              
+ 287   3                              }
+ 288   2                              else if(pv_voltage_value>=402)
+ 289   2                              {
+ 290   3                                      pv_time_count=0x00;
+ 291   3                                      
+ 292   3                                      pv_voltage_status=0x00; //¿ÕÏÐ×´Ì¬
+ 293   3                              }
+ 294   2                              else
+ 295   2                              {
+ 296   3                                      pv_time_count=0x00;
+ 297   3                                                      
+ 298   3                              }
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 6   
+
+ 299   2                              
+ 300   2                              if(pv_index==0x01)
+ 301   2                              {                                
+ 302   3                                      if(pv_voltage_value<=light_on_pv_level)                                                                         //¼ø±ð°×ÌìºÍºÚÒ¹   Í¨¹ý¹â·ü°åµçÑ¹¼ì²â   5V---10V
+ 303   3                                      {                                                                                                                                                                                               
+ 304   4                                              night_time_count++;
+ 305   4                                                                                      
+ 306   4                                              if(night_time_count>light_time_level)  
+ 307   4                                              {
+ 308   5                                                      night_time_count=0x00;
+ 309   5                                                      
+ 310   5                                                      pv_voltage_status=0x02;                                                                                         //Ò¹Íí×´Ì¬   ¼´½«½øÈë·ÅµçÄ£Ê½
+ 311   5                                                      
+ 312   5                                                      pv_index=0x00;
+ 313   5                                              }
+ 314   4                                                      
+ 315   4                                      }
+ 316   3                                      else
+ 317   3                                      {                                       
+ 318   4                                              night_time_count=0x00;
+ 319   4                                      } 
+ 320   3                              
+ 321   3                              }
+ 322   2                                                                              
+ 323   2                              handle_an2_process_flag=0x00;                                           
+ 324   2                      }               
+ 325   1                      //------------------------------------------------------------------------------------------------------
+             -------------------------------------------------
+ 326   1                      if(handle_an9_process_flag==0x01)               //µçÁ÷¼ì²â·¶Î§£º0.15A---5A  ²ÉÑùµç×è15ºÁÅ·
+ 327   1                      {
+ 328   2                              charge_current_value=0x00;
+ 329   2                              
+ 330   2                              if(system_status ==SYSTEM_CHARGE_STATUS)
+ 331   2                              {                               
+ 332   3                      nop();
+ 333   3                              }                       
+ 334   2                              
+ 335   2                              handle_an9_process_flag=0x00;
+ 336   2                                                      
+ 337   2                      }
+ 338   1                      //------------------------------------------------------------------------------------------------------
+             -------------------------------------------------
+ 339   1                      if(handle_an3_process_flag==0x01)
+ 340   1                      {               
+ 341   2                              battery_voltage_value=start_ad_convert(AN3_CHANNEL);                    //²ÉÑùÍ¨µÀÑ¡Ôñ  AN3     µç³ØµçÑ¹   ·ÖÑ¹µç×èËõ¼õ±ÈÀý
+             - 1:31.04
+ 342   2                              //-------------------------------------------------------------------                   
+ 343   2                              if((battery_voltage_value<((12.70/31.04)*819.2))&&(charge_index==0x00)) //ï®µç³ØµçÑ¹ÊÇ·ñÕý³££¿  <14.0V
+ 344   2                              {
+ 345   3                                      bt_time_count++;
+ 346   3                                      
+ 347   3                                      if(bt_time_count>=100)
+ 348   3                                      {
+ 349   4                                              bt_time_count=0x00;
+ 350   4                                              
+ 351   4                                              bt_led_status=0x01;
+ 352   4                                              
+ 353   4                                              charge_index=0x01;
+ 354   4                                              
+ 355   4                                              battery_voltage_status=0x01;    //µç³Ø×´Ì¬Õý³£
+ 356   4                                      }                                       
+ 357   3                                      
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 7   
+
+ 358   3                              }
+ 359   2                              else if((battery_voltage_value>=((12.70/31.04)*819.2))&&(charge_index<=0x01))
+ 360   2                              {               
+ 361   3                                              bt_led_status=0x00;
+ 362   3                                              
+ 363   3                                              bt_time_count=0x00;
+ 364   3                                                                                                      
+ 365   3                                              battery_voltage_status=0x00;                                    //µç³Ø×´Ì¬Òì³£
+ 366   3                              }
+ 367   2                              //--------------------------------------------------------------------------------------------------
+ 368   2                              if( (battery_voltage_value<dianchi_guoya_huifu) && (charge_index==0x02) )               //<µç³Ø³äµç»Ö¸´µçÑ¹
+ 369   2                              {
+ 370   3                                                                      
+ 371   3                                      charge_index=0x03;
+ 372   3                                      
+ 373   3                                      charge_led_status=0x01;
+ 374   3                                      
+ 375   3                      CHARGE_ON;
+ 376   3                              
+ 377   3                              }
+ 378   2                              else if( (battery_voltage_value>=dianchi_guoya_huifu) && (charge_index==0x02) )
+ 379   2                              {
+ 380   3                                      
+ 381   3                                      charge_led_status=0x00;
+ 382   3                                      
+ 383   3                     CHARGE_OFF;
+ 384   3                                      
+ 385   3                              }
+ 386   2                              else if( (battery_voltage_value<dianchi_guoya_baohu) && (charge_index>=0x03) )
+ 387   2                              {
+ 388   3                                      
+ 389   3                                      if((charge_current_value<charge_i_limit)&&(charge_index>=0x03))     //³äµçµçÁ÷£º0---12A 
+ 390   3                                      {
+ 391   4                                              mppt_time_count++;
+ 392   4                                              
+ 393   4                                              if(mppt_time_count>5)
+ 394   4                                              {
+ 395   5                                                      mppt_time_count=0x00;
+ 396   5                                                      
+ 397   5                                                      //Mppt_Charge();                //MPPT³äµçÄ£Ê½
+ 398   5                                                      
+ 399   5                                                      //I_prev=charge_current_value;
+ 400   5                                              }                                                                                                                                       
+ 401   4                                                              
+ 402   4                                      }
+ 403   3                                      
+ 404   3                                      involid_time_count=0x00;
+ 405   3                                      
+ 406   3                              }
+ 407   2                              else if( (battery_voltage_value>=(dianchi_guoya_baohu)) && (charge_index>=0x03) )  
+ 408   2                              {
+ 409   3                                      involid_time_count++;
+ 410   3                                      
+ 411   3                                      if(involid_time_count>1000)
+ 412   3                                      {
+ 413   4                                              involid_time_count=0x00;
+ 414   4                                              
+ 415   4                                              if(charge_index>=0x03)  
+ 416   4                                              {
+ 417   5                                                      charge_index=0x05;
+ 418   5                                                      
+ 419   5                                                      CHARGE_OFF;                                      //ÐÞ¸Ä¹ý20181120         ÒÑ¸Ä»Ø
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 8   
+
+ 420   5      
+ 421   5      //                                              CHARGE_ON;
+ 422   5                                                      
+ 423   5                                                      charge_led_status=0x00;
+ 424   5                                                      
+ 425   5                                                      while(1); //µÈ´ýÏµÍ³¸´Î»
+ 426   5                                              }       
+ 427   4                                      }       
+ 428   3                              }
+ 429   2                                                                                                      
+ 430   2                              handle_an3_process_flag=0x00;
+ 431   2                                                      
+ 432   2                      }
+ 433   1                      //------------------------------------------------------------------------------------------------------
+             -------------------------------------------------              
+ 434   1                      if(handle_an4_process_flag==0x01)                                       //·ÖÑ¹µç×èËõ¼õ±ÈÀý 1:61
+ 435   1                      {
+ 436   2                              load_voltage_value=0x00;
+ 437   2                              
+ 438   2                              if(system_status ==SYSTEM_DISCHARGE_STATUS)
+ 439   2                              {
+ 440   3                                      load_voltage_value=start_ad_convert(AN4_CHANNEL);       //²ÉÑùÍ¨µÀÑ¡Ôñ  AN4 ¸ºÔØÊä³ö¶ËµçÑ¹
+ 441   3                              
+ 442   3                                      //---------------------------------------------------------------------------------------------------
+ 443   3                                      if((load_voltage_value<shuchu_shortout_voltage)&&(discharge_index==0x02)&&(PID_CC_discharge.SetPoint>0
+             -))             //Êä³ö¶Ë  <Êä³ö¶ÌÂ·µçÑ¹µã   ¿ÉÅÐ¶¨£º1.Êä³ö¶Ë¶ÌÂ·  2.LEDµÆÖéÑ¡ÓÃ´íÎó
+ 444   3                                      {
+ 445   4                          load_short_time_count++;
+ 446   4                                                      
+ 447   4                              if(load_short_time_count>1000)
+ 448   4                              {
+ 449   5                                                      load_short_time_count=0x00;                             
+ 450   5                                                                      
+ 451   5                                                      bost_pwm_value=0;
+ 452   5                                                                      
+ 453   5                                                      Set_Bost_Pwm_Duty(bost_pwm_value);
+ 454   5                                                                      
+ 455   5                                                      discharge_led_status=0x00;
+ 456   5                                                                      
+ 457   5                                                      delay_ms(1);                    //2018-03-22
+ 458   5                                                                      
+ 459   5                                                      Disable_Bost_Pwm();             //2018-03-22
+ 460   5                                                                      
+ 461   5                                                      LOAD_OUT_DISABLE;               //2018-03-22
+ 462   5                                                                      
+ 463   5                                                      while(1); //µÈ´ýÏµÍ³¸´Î»
+ 464   5                              }
+ 465   4                                                      
+ 466   4                      }
+ 467   3                                      else if((load_voltage_value>=shuchu_shortout_voltage)&&(load_voltage_value<(shuchu_shortout_voltage*2)
+             -)&&(discharge_index==0x02)&&(PID_CC_discharge.SetPoint>0))            
+ 468   3                                      {
+ 469   4                              load_short_time_count++;
+ 470   4                      
+ 471   4                              if(load_short_time_count>1000)
+ 472   4                              {
+ 473   5                                                      load_short_time_count=0x00;     
+ 474   5                                                                      
+ 475   5                                                      discharge_index=0x03;                   
+ 476   5                                                                      
+ 477   5                                                      bost_pwm_value=0;
+ 478   5                                                                      
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 9   
+
+ 479   5                                                      Set_Bost_Pwm_Duty(bost_pwm_value);
+ 480   5                                                                      
+ 481   5                                                      discharge_led_status=0x00;
+ 482   5                                                                      
+ 483   5                                                      delay_ms(1);                    
+ 484   5                                                                      
+ 485   5                                                      Disable_Bost_Pwm();             
+ 486   5                                                                      
+ 487   5                                                      LOAD_OUT_DISABLE;               
+ 488   5                                                                      
+ 489   5                                                      while(1); //µÈ´ýÏµÍ³¸´Î»
+ 490   5                              }
+ 491   4                                                      
+ 492   4                                      }
+ 493   3                                      else
+ 494   3                                      {
+ 495   4                          load_short_time_count=0x00;
+ 496   4                                      }                                                               
+ 497   3                                      //---------------------------------------------------------------------------------------------------
+ 498   3                                      if((load_voltage_value>shuchu_open_voltage)&&(discharge_index==0x02)) //Êä³ö¶ËµçÑ¹>60V+·ÅµçÄ£Ê½=¸ºÔØ¶Ë
+             -¿ªÂ·¹ýÑ¹
+ 499   3                                      {
+ 500   4                          load_open_time_count++;
+ 501   4                      
+ 502   4                          if(load_open_time_count>1000)
+ 503   4                          {                                                           
+ 504   5                              discharge_index=0x03;
+ 505   5                                                              
+ 506   5                                                      load_open_time_count=0x00;                      
+ 507   5                                                                                                              
+ 508   5                                                      bost_pwm_value=0;
+ 509   5                                                                              
+ 510   5                                                      Set_Bost_Pwm_Duty(bost_pwm_value);
+ 511   5                                                                              
+ 512   5                                                      discharge_led_status=0x00;
+ 513   5                                                                      
+ 514   5                                                      delay_ms(1);                    
+ 515   5                                                                              
+ 516   5                                                      Disable_Bost_Pwm();             
+ 517   5                                                                              
+ 518   5                                                      LOAD_OUT_DISABLE;               
+ 519   5                                                                      
+ 520   5                                                      while(1); //µÈ´ýÏµÍ³¸´Î»
+ 521   5                          }
+ 522   4              
+ 523   4                                      }
+ 524   3                                      else
+ 525   3                                      {
+ 526   4                          load_open_time_count=0x00;
+ 527   4                                      }       
+ 528   3                                      //---------------------------------------------------------------------------------------------------
+ 529   3                              }               
+ 530   2                              handle_an4_process_flag=0x00;
+ 531   2                      }       
+ 532   1                      //-----------------------------------------------------------------------------------------Êä³öµçÁ÷
+ 533   1                      if(handle_an10_process_flag==0x01)                      //LED¸ºÔØµçÁ÷   ²ÉÑùµç×è=160ºÁÅ·
+ 534   1                      {
+ 535   2                              discharge_current_value=0x00;
+ 536   2                              
+ 537   2                              if(system_status == SYSTEM_DISCHARGE_STATUS)                            //ÏµÍ³´¦ÓÚ·Åµç×´Ì¬
+ 538   2                              {
+ 539   3                                      discharge_current_value=start_ad_convert(AN10_CHANNEL);                 //²ÉÑùÍ¨µÀÑ¡Ôñ  AN10    ·ÅµçµçÁ÷
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 10  
+
+ 540   3                                                              
+ 541   3                                      if((discharge_current_value>discharge_i_baohu)&&(discharge_index==0x02))        //¹ýÔØ±£»¤    >2.4A
+ 542   3                                      {                                                                       
+ 543   4                                              over_load_time_count++;
+ 544   4                                              
+ 545   4                                              if(over_load_time_count>20)                                                                                             //¹ýÔØÑÓÊ±±£»¤
+ 546   4                                              {                                                                               
+ 547   5                                                      discharge_index=0x03;
+ 548   5                                                                                      
+ 549   5                                                      bost_pwm_value=0;
+ 550   5                                                      
+ 551   5                                                      Set_Bost_Pwm_Duty(bost_pwm_value);
+ 552   5                                                      
+ 553   5                                                      delay_ms(1);
+ 554   5                                                      
+ 555   5                                                      Disable_Bost_Pwm();
+ 556   5                                                      
+ 557   5                                                      LOAD_OUT_DISABLE;
+ 558   5                                                      
+ 559   5                                                      over_load_time_count=0x00;
+ 560   5                                                      
+ 561   5                                                      discharge_led_status=0x00;
+ 562   5                                                      
+ 563   5                                                      while(1); //µÈ´ýÏµÍ³¸´Î»
+ 564   5                                              }
+ 565   4                                              
+ 566   4                                      }
+ 567   3                                      else
+ 568   3                                      {
+ 569   4                                                      over_load_time_count=0x00;
+ 570   4                                      }
+ 571   3                                      
+ 572   3                                      if((battery_voltage_value>dianchi_qianya_huifu)&&(discharge_index==0x01))   //    µç³ØÇ·Ñ¹»Ö¸´µã
+ 573   3                                      {
+ 574   4                                              discharge_index=0x02;
+ 575   4                                              
+ 576   4                                              discharge_led_status=0x01;
+ 577   4                                              
+ 578   4                                              open_discharge_time=0x01;                                       
+ 579   4                                              
+ 580   4                                              LOAD_OUT_ENABLE;
+ 581   4                                                                                                                                                                                                                                                                              
+ 582   4                                              Enable_Bost_Pwm();                                      
+ 583   4                                              
+ 584   4                                      }
+ 585   3                                      else if((battery_voltage_value<=dianchi_qianya_huifu)&&(discharge_index==0x01))
+ 586   3                                      {
+ 587   4                                              discharge_led_status=0x00;
+ 588   4                                              
+ 589   4                                              open_discharge_time=0x00;
+ 590   4                                      }
+ 591   3                                      
+ 592   3                                      if(discharge_index==0x02)
+ 593   3                                      {
+ 594   4                                              battery_voltage_value = start_ad_convert(AN3_CHANNEL);
+ 595   4                                              
+ 596   4                                              battery_voltage_value = battery_voltage_value + (0.4/31.04)*819.2*(discharge_current_value/(((load_cc
+             -_I*150)/1000)*819.2));        
+ 597   4                                      }
+ 598   3                                      
+ 599   3                                       if((battery_voltage_value>=dianchi_qianya_baohu)&&(discharge_index==0x02))             //µç³ØµçÑ¹>Ç·Ñ¹±£»¤µã
+ 600   3                                       {
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 11  
+
+ 601   4                                               
+ 602   4                                              if((discharge_current_value<=discharge_i_limit)&&(discharge_index==0x02))               //PID ºãÁ÷Êä³ö¿ØÖÆ  Ä¬È
+             -Ï350mA(330mA)   PID µ÷½Ú   µçÁ÷ÏÞÖÆ<2.1A
+ 603   4                                              {                                                                   
+ 604   5      
+ 605   5                                                      //----------------------------------------------------------------------------Ê±³¤½ÚÄÜµ÷½ÚÄ£Ê½
+ 606   5                                                      t1=step_01_time_limit;
+ 607   5                                                      t2=step_01_time_limit+step_02_time_limit;
+ 608   5                                                      t3=step_01_time_limit+step_02_time_limit+step_03_time_limit;
+ 609   5                                                      t4=step_01_time_limit+step_02_time_limit+step_03_time_limit+step_04_time_limit;
+ 610   5                                                      t5=step_01_time_limit+step_02_time_limit+step_03_time_limit+step_04_time_limit+step_05_time_limit;
+ 611   5                                                      
+ 612   5                                                      if((ho_cnt<t1) && (Adjust_Pout_Flag<=0x01))     
+ 613   5                                                      {
+ 614   6                                                              Adjust_Pout_Flag=0x01;  
+ 615   6                                                      }
+ 616   5                                                      else if((ho_cnt>=t1) && (ho_cnt<t2) && (Adjust_Pout_Flag<=0x02))
+ 617   5                                                      {
+ 618   6                                                              Adjust_Pout_Flag=0x02;  
+ 619   6                                                      }
+ 620   5                                                      else if((ho_cnt>=t2) && (ho_cnt<t3) && (Adjust_Pout_Flag<=0x03))
+ 621   5                                                      {
+ 622   6                                                              Adjust_Pout_Flag=0x03;  
+ 623   6                                                      }
+ 624   5                                                      else if((ho_cnt>=t3) && (ho_cnt<t4) && (Adjust_Pout_Flag<=0x04))
+ 625   5                                                      {
+ 626   6                                                              Adjust_Pout_Flag=0x04;  
+ 627   6                                                      }
+ 628   5                                                      else if((ho_cnt>=t4) && (ho_cnt<t5) && (Adjust_Pout_Flag<=0x05))
+ 629   5                                                      {
+ 630   6                                                              Adjust_Pout_Flag=0x05;  
+ 631   6                                                      }
+ 632   5                                                      else
+ 633   5                                                      {
+ 634   6                                                              Adjust_Pout_Flag=0x00;
+ 635   6                                                      }
+ 636   5                                                      //----------------------------------------------------------------------------µçÁ¿µ÷½ÚÄ£Ê½
+ 637   5                                                      if((battery_voltage_value>bt_volt_80) && (voltage_adjust_index<=0x01))
+ 638   5                                                      {
+ 639   6                                                              index_01_count++;
+ 640   6                                                              index_02_count=0x00;
+ 641   6                                                              index_03_count=0x00;
+ 642   6                                                              index_04_count=0x00;
+ 643   6                                                              index_05_count=0x00;
+ 644   6                                                              index_06_count=0x00;
+ 645   6                                                              if(index_01_count>100)
+ 646   6                                                              {
+ 647   7                                                                      voltage_adjust_index=0x01;
+ 648   7                                                                      index_01_count=0x00;
+ 649   7                                                              }
+ 650   6                                                              
+ 651   6                                                      }
+ 652   5                                                      else if((battery_voltage_value>bt_volt_60) && (battery_voltage_value<=bt_volt_80) && (voltage_adjust
+             -_index<=0x02))
+ 653   5                                                      {
+ 654   6                                                              index_02_count++;
+ 655   6                                                              index_01_count=0x00;
+ 656   6                                                              index_03_count=0x00;
+ 657   6                                                              index_04_count=0x00;
+ 658   6                                                              index_05_count=0x00;
+ 659   6                                                              index_06_count=0x00;
+ 660   6                                                              if(index_02_count>100)
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 12  
+
+ 661   6                                                              {
+ 662   7                                                                      voltage_adjust_index=0x02;
+ 663   7                                                                      index_02_count=0x00;
+ 664   7                                                              }
+ 665   6                                                      }
+ 666   5                                                      else if((battery_voltage_value>bt_volt_40) && (battery_voltage_value<=bt_volt_60) && (voltage_adjust
+             -_index<=0x03))
+ 667   5                                                      {
+ 668   6                                                              index_03_count++;
+ 669   6                                                              index_02_count=0x00;
+ 670   6                                                              index_01_count=0x00;
+ 671   6                                                              index_04_count=0x00;
+ 672   6                                                              index_05_count=0x00;
+ 673   6                                                              index_06_count=0x00;
+ 674   6                                                              if(index_03_count>100)
+ 675   6                                                              {
+ 676   7                                                                      voltage_adjust_index=0x03;
+ 677   7                                                                      index_03_count=0x00;
+ 678   7                                                              }
+ 679   6                                                      }
+ 680   5                                                      else if((battery_voltage_value>bt_volt_20) && (battery_voltage_value<=bt_volt_40) && (voltage_adjust
+             -_index<=0x04))
+ 681   5                                                      {
+ 682   6                                                              index_04_count++;
+ 683   6                                                              index_02_count=0x00;
+ 684   6                                                              index_03_count=0x00;
+ 685   6                                                              index_01_count=0x00;
+ 686   6                                                              index_05_count=0x00;
+ 687   6                                                              index_06_count=0x00;
+ 688   6                                                              if(index_04_count>100)
+ 689   6                                                              {
+ 690   7                                                                      voltage_adjust_index=0x04;
+ 691   7                                                                      index_04_count=0x00;
+ 692   7                                                              }
+ 693   6                                                      }
+ 694   5                                                      else if((battery_voltage_value>bt_volt_00) && (battery_voltage_value<=bt_volt_20) && (voltage_adjust
+             -_index<=0x05))
+ 695   5                                                      {
+ 696   6                                                              index_05_count++;
+ 697   6                                                              index_02_count=0x00;
+ 698   6                                                              index_03_count=0x00;
+ 699   6                                                              index_04_count=0x00;
+ 700   6                                                              index_01_count=0x00;
+ 701   6                                                              index_06_count=0x00;
+ 702   6                                                              if(index_05_count>100)
+ 703   6                                                              {
+ 704   7                                                                      voltage_adjust_index=0x05;
+ 705   7                                                                      index_05_count=0x00;
+ 706   7                                                              }
+ 707   6                                                      }
+ 708   5                                                      else if((battery_voltage_value<bt_volt_00) && (voltage_adjust_index<=0x06))
+ 709   5                                                      {
+ 710   6                                                              index_06_count++;
+ 711   6                                                              index_02_count=0x00;
+ 712   6                                                              index_03_count=0x00;
+ 713   6                                                              index_04_count=0x00;
+ 714   6                                                              index_05_count=0x00;
+ 715   6                                                              index_01_count=0x00;
+ 716   6                                                              if(index_06_count>100)
+ 717   6                                                              {
+ 718   7                                                                      voltage_adjust_index=0x06;
+ 719   7                                                                      index_06_count=0x00;
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 13  
+
+ 720   7                                                              }
+ 721   6                                                      }
+ 722   5                                                      else
+ 723   5                                                      {
+ 724   6                                                              index_01_count=0x00;
+ 725   6                                                              index_02_count=0x00;
+ 726   6                                                              index_03_count=0x00;
+ 727   6                                                              index_04_count=0x00;
+ 728   6                                                              index_05_count=0x00;
+ 729   6                                                              index_06_count=0x00;
+ 730   6                                                      }
+ 731   5                                                      //---------------------------------------------------------------------------ÏÞ¶¨¹¦ÂÊÊä³ö
+ 732   5                                                      
+ 733   5                                                              PID_CC_discharge.SetPoint=((load_cc_I*150)/1000)*819.2;
+ 734   5                                                              
+ 735   5                                                              data_cc_var = PID_CC_discharge.SetPoint;                                                        
+ 736   5                                                                                                              
+ 737   5                                              
+ 738   5                                                      //------------------------------------------------------µçÁ¿½ÚÄÜµ÷½Ú
+ 739   5                                                              if(voltage_adjust_index==0x01)
+ 740   5                                                              {
+ 741   6                                                                      PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*1.0;
+ 742   6                                                              }
+ 743   5                                                              else if(voltage_adjust_index==0x02)
+ 744   5                                                              {
+ 745   6                                                                      PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.60;
+ 746   6                                                              }
+ 747   5                                                              else if(voltage_adjust_index==0x03)
+ 748   5                                                              {
+ 749   6                                                                      PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.35;
+ 750   6                                                              }
+ 751   5                                                              else if(voltage_adjust_index==0x04)
+ 752   5                                                              {
+ 753   6                                                                      PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.20;
+ 754   6                                                              }
+ 755   5                                                              else if(voltage_adjust_index==0x05)
+ 756   5                                                              {
+ 757   6                                                                      PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.10;
+ 758   6                                                              }
+ 759   5                                                              else if(voltage_adjust_index==0x06)
+ 760   5                                                              {
+ 761   6                                                                      PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.03;                        
+ 762   6                                                              }
+ 763   5                                                              
+ 764   5                                                              
+ 765   5                                                      //---------------------------------------------------------ÁÁµÆÄ£Ê½
+ 766   5                                                       if((light_mode==0x00) && (work_mode==0x00))//³£ÁÁÄ£Ê½
+ 767   5                                                       {
+ 768   6                                                              if((ho_cnt==0) && (mi_cnt<30))                          //¸ÄÖ®Ç°ho_cnt==0 && mi_cnt<30
+ 769   6                                                              {
+ 770   7                                                                      if(voltage_adjust_index==0x05)
+ 771   7                                                                      {
+ 772   8                                                                              PID_CC_discharge.SetPoint = data_cc_var*0.05;            //ÐÞ¸ÄÇ°0.01
+ 773   8                                                                      }
+ 774   7                                                                      else
+ 775   7                                                                      {
+ 776   8                                                                         PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.5; //³£ÁÁÄ£Ê½
+ 777   8                                                                      }
+ 778   7                                                                       
+ 779   7                                                              }
+ 780   6                                                              else
+ 781   6                                                              {
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 14  
+
+ 782   7                                                                      if(have_person1_flag==0x01)
+ 783   7                                                                      {
+ 784   8                                                                              if(voltage_adjust_index==0x05)
+ 785   8                                                                              {
+ 786   9                                                                                      PID_CC_discharge.SetPoint = data_cc_var*0.05;     //ÐÞ¸ÄÇ°0.01
+ 787   9                                                                              }
+ 788   8                                                                              else
+ 789   8                                                                              {
+ 790   9                                                                                 PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.5; //³£ÁÁÄ£Ê½
+ 791   9                                                                              } 
+ 792   8                                                                      }
+ 793   7                                                                      else
+ 794   7                                                                      {
+ 795   8                                                                              if(voltage_adjust_index==0x05)
+ 796   8                                                                              {
+ 797   9                                                                                      PID_CC_discharge.SetPoint = data_cc_var*0.05;
+ 798   9                                                                              }
+ 799   8                                                                              else
+ 800   8                                                                              {
+ 801   9                                                                                 PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.5*0.7; //³£ÁÁÄ£Ê½
+ 802   9                                                                              } 
+ 803   8                                                                      }
+ 804   7                                                              }
+ 805   6                                                              
+ 806   6                                                       }
+ 807   5                                                       else if((light_mode==0x01) && (work_mode==0x00))//¸ÐÓ¦Ä£Ê½
+ 808   5                                                       {
+ 809   6                                                              if(have_person1_flag==0x01)
+ 810   6                                                              {
+ 811   7                                                                      nop();          //ÓÐ¸ÐÓ¦Ê± µçÁ¿µ÷½ÚÊä³ö                                                         
+ 812   7                                                              }
+ 813   6                                                              else
+ 814   6                                                              {
+ 815   7                                                                      PID_CC_discharge.SetPoint = data_cc_var*0.05; //ÎÞ¸ÐÓ¦Ê± 5%Êä³ö  //¸ÄÖ®Ç°0.015
+ 816   7                                                              }
+ 817   6                                                       }
+ 818   5                                                       else if((light_mode==0x02) && (work_mode==0x00))//ÖÇÄÜÄ£Ê½
+ 819   5                                                       {
+ 820   6                                                              if((Adjust_Pout_Flag==0x01) && (voltage_adjust_index<0x04)) //2018-11-7-caiweikai  voltage>10.7V  
+             -Ç°5Ð¡Ê±
+ 821   6                                                              {
+ 822   7                                                                      if((ho_cnt==0) && (mi_cnt<30))
+ 823   7                                                                      {
+ 824   8                                                                              if(voltage_adjust_index==0x05)
+ 825   8                                                                              {
+ 826   9                                                                                      PID_CC_discharge.SetPoint = data_cc_var*0.05;            //0.01
+ 827   9                                                                              }
+ 828   8                                                                              else
+ 829   8                                                                              {
+ 830   9                                                                                 PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.5; //³£ÁÁÄ£Ê½
+ 831   9                                                                              }
+ 832   8                                                                               
+ 833   8                                                                      }
+ 834   7                                                                      else
+ 835   7                                                                      {
+ 836   8                                                                              if(have_person1_flag==0x01)
+ 837   8                                                                              {
+ 838   9                                                                                      if(voltage_adjust_index==0x05)
+ 839   9                                                                                      {
+ 840  10                                                                                              PID_CC_discharge.SetPoint = data_cc_var*0.05;            //0.01
+ 841  10                                                                                      }
+ 842   9                                                                                      else
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 15  
+
+ 843   9                                                                                      {
+ 844  10                                                                                         PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.5; //³£ÁÁÄ£Ê½
+ 845  10                                                                                      } 
+ 846   9                                                                              }
+ 847   8                                                                              else
+ 848   8                                                                              {
+ 849   9                                                                                      if(voltage_adjust_index==0x05)
+ 850   9                                                                                      {
+ 851  10                                                                                              PID_CC_discharge.SetPoint = data_cc_var*0.05;
+ 852  10                                                                                      }
+ 853   9                                                                                      else
+ 854   9                                                                                      {
+ 855  10                                                                                         PID_CC_discharge.SetPoint = PID_CC_discharge.SetPoint*0.5*0.7; //³£ÁÁÄ£Ê½ 0.01
+ 856  10                                                                                      } 
+ 857   9                                                                              }
+ 858   8                                                                      }
+ 859   7                                                              }
+ 860   6                                                              else if((Adjust_Pout_Flag>=0x02) || (voltage_adjust_index>=0x04))
+ 861   6                                                              {
+ 862   7                                                                      if(have_person1_flag==0x01)
+ 863   7                                                                      {
+ 864   8                                                                              nop();          //ÓÐ¸ÐÓ¦Ê± µçÁ¿µ÷½ÚÊä³ö
+ 865   8                                                                      }
+ 866   7                                                                      else
+ 867   7                                                                      {
+ 868   8                                                                              PID_CC_discharge.SetPoint = data_cc_var*0.05; //ÎÞ¸ÐÓ¦Ê± 5%Êä³ö 0.015
+ 869   8                                                                      }
+ 870   7                                                              }
+ 871   6                                                       }
+ 872   5                                                      //---------------------------------------------------------¿ª¹ØµÆ¿ØÖÆ
+ 873   5                                                              if((led_out_ctrl==0x01) && (work_mode==0x00))
+ 874   5                                                              {
+ 875   6                                                                      PID_CC_discharge.SetPoint = 0;
+ 876   6                                                              }
+ 877   5                                                              
+ 878   5                                                      //---------------------------------------------------------
+ 879   5                                                              pid_index = 0x01; //ºãÁ÷·ÅµçPIDµ÷½Ú±êÖ¾
+ 880   5                                                              
+ 881   5                                                              PWM_I=pid_calc(&PID_CC_discharge,discharge_current_value);
+ 882   5                                                                              
+ 883   5                                                          PWM  = PWM+PWM_I;
+ 884   5                                                                      
+ 885   5                                                          if( PWM>=BOST_PWM_MAX)
+ 886   5                                                          {
+ 887   6                                                               PWM=BOST_PWM_MAX;
+ 888   6                                                          }                              
+ 889   5                                                          else if(PWM<=BOST_PWM_MIN) 
+ 890   5                                                          {
+ 891   6                                                               PWM=BOST_PWM_MIN;
+ 892   6                                                          }
+ 893   5                                                          
+ 894   5                                                          bost_pwm_value = (unsigned int)PWM;
+ 895   5                                                          
+ 896   5                                                          if(PID_CC_discharge.SetPoint==0)
+ 897   5                                                          {
+ 898   6                                                              bost_pwm_value = 0;
+ 899   6                                                          }
+ 900   5                                                          else if((PID_CC_discharge.SetPoint<=1) && (PID_CC_discharge.SetPoint>0))
+ 901   5                                                          {
+ 902   6                                                              bost_pwm_value = 25;
+ 903   6                                                          }
+ 904   5                                                          
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 16  
+
+ 905   5                                                          Set_Bost_Pwm_Duty(bost_pwm_value);
+ 906   5                                                          
+ 907   5                                                          limit_power_pid_flag=0x00;          //ÇåÏÞ¶¨Êä³ö¹¦ÂÊ±êÖ¾
+ 908   5                                                              
+ 909   5                                                              
+ 910   5                                              }
+ 911   4                                              else if((discharge_current_value>discharge_i_limit)&&(discharge_index==0x02))
+ 912   4                                              {
+ 913   5                                                      if(bost_pwm_value>0)
+ 914   5                                                      {
+ 915   6                                                              bost_pwm_value = bost_pwm_value-1;                                                                                              
+ 916   6                                                      }
+ 917   5                                                      
+ 918   5                                                      Set_Bost_Pwm_Duty(bost_pwm_value);
+ 919   5                                              }
+ 920   4                                              
+ 921   4                                              battery_low_time_count=0;
+ 922   4                                              
+ 923   4                                       }
+ 924   3                                       else if((battery_voltage_value<dianchi_qianya_baohu)&&(discharge_index==0x02)) //   Ç·Ñ¹±£»¤ 
+ 925   3                                       {
+ 926   4                                                      
+ 927   4                                                      battery_low_time_count++;
+ 928   4                                              
+ 929   4                                                      if(battery_low_time_count>1000)
+ 930   4                                                      {                                                                                                       
+ 931   5                                                              discharge_index=0x03;
+ 932   5                                                              
+ 933   5                                                              bost_pwm_value=0;
+ 934   5                                                              
+ 935   5                                                              Set_Bost_Pwm_Duty(bost_pwm_value);
+ 936   5                                                              
+ 937   5                                                              battery_low_time_count=0x00;
+ 938   5                                                              
+ 939   5                                                              discharge_led_status=0x00;
+ 940   5                                                              
+ 941   5                                                              while(1); //µÈ´ýÏµÍ³¸´Î»
+ 942   5                                                      }
+ 943   4                                       
+ 944   4                                       }
+ 945   3                                       else
+ 946   3                                       {
+ 947   4                                                      battery_low_time_count=0;
+ 948   4                                       }
+ 949   3                              
+ 950   3                              }
+ 951   2                                                      
+ 952   2                              handle_an10_process_flag=0x00;
+ 953   2                      }
+ 954   1      
+ 955   1      }
+ 956          
+ 957          
+ 958          
+ 959          /**********************************************************************
+ 960          *º¯ÊýÃû³Æ£ºstart_ad_convert
+ 961          *ÃèÊö£ºÆô¶¯AD²ÉÑù×ª»»
+ 962          *·µ»ØÀàÐÍ£ºunsigned int
+ 963          *ÊäÈëÐÎ²Î£ºunsigned char
+ 964          ***********************************************************************/
+ 965          unsigned int start_ad_convert(unsigned char ch)
+ 966          {
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 17  
+
+ 967   1              
+ 968   1          unsigned char i,j;          
+ 969   1                              
+ 970   1          unsigned int temp;
+ 971   1                              
+ 972   1          unsigned char ad_ch;
+ 973   1                              
+ 974   1          ad_ch=0x00;
+ 975   1                              
+ 976   1          ad_ch=ch;
+ 977   1              
+ 978   1          //-------------------------------------------²ÉÑùÍ¨µÀÑ¡Ôñ
+ 979   1          clr_ADCEN; //¹Ø±ÕADCÍâÉè
+ 980   1          
+ 981   1          if(ch==AN1_CHANNEL)
+ 982   1          {
+ 983   2            Enable_ADC_AIN3;
+ 984   2          }
+ 985   1          else if(ch==AN2_CHANNEL)
+ 986   1          {
+ 987   2            Enable_ADC_AIN2;
+ 988   2          }
+ 989   1          else if(ch==AN3_CHANNEL)
+ 990   1          {
+ 991   2            Enable_ADC_AIN6;
+ 992   2          }
+ 993   1          else if(ch==AN4_CHANNEL)
+ 994   1          {
+ 995   2            Enable_ADC_AIN5;
+ 996   2          }
+ 997   1          else if(ch==AN10_CHANNEL)
+ 998   1          {
+ 999   2            Enable_ADC_AIN7;
+1000   2          }
+1001   1              
+1002   1          set_ADCEN;  //Ê¹ÄÜADÍâÉè
+1003   1          
+1004   1          
+1005   1          //---------------------------------------------------------------------------------------           
+1006   1              if((ad_ch==AN10_CHANNEL)||(ad_ch==AN9_CHANNEL))   //·ÅµçµçÁ÷----³äµçµçÁ÷
+1007   1              {
+1008   2                      for(i=0;i<51;i++)
+1009   2                      {
+1010   3                  set_ADCEN;
+1011   3                                      
+1012   3                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1013   3                                              
+1014   3                              clr_ADCF;
+1015   3      
+1016   3                              set_ADCS;  //Æô¶¯AD×ª»»
+1017   3              
+1018   3                              while(ADCF==0);
+1019   3                              clr_ADCF;
+1020   3              
+1021   3                              adc_buffer[i]=(unsigned int)(ADCRH<<4)+(ADCRL&0x0f);      //¶ÁÈ¡×ª»»½á¹û
+1022   3                  
+1023   3                  clr_ADCEN;
+1024   3                      }
+1025   2                      //------------Ã°ÅÝÅÅÐòËã·¨
+1026   2                      for(j=0;j<50;j++)
+1027   2                      {
+1028   3                              for(i=0;i<50-j;i++)
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 18  
+
+1029   3                              {
+1030   4                                      if(adc_buffer[i]>adc_buffer[i+1])
+1031   4                                      {
+1032   5                                              temp=adc_buffer[i];
+1033   5                                              
+1034   5                                              adc_buffer[i]=adc_buffer[i+1];
+1035   5              
+1036   5                                              adc_buffer[i+1]=temp;
+1037   5                                      }                       
+1038   4              
+1039   4                              }
+1040   3                      }
+1041   2              
+1042   2                      clr_ADCEN;
+1043   2                                                                                      
+1044   2                      return((adc_buffer[24]+adc_buffer[26]+
+1045   2                                      adc_buffer[22]+adc_buffer[28]+
+1046   2                                      adc_buffer[20]+adc_buffer[30]+
+1047   2                                      adc_buffer[18]+adc_buffer[32]+
+1048   2                                      adc_buffer[16]+adc_buffer[34]+
+1049   2                                      adc_buffer[14]+adc_buffer[36]+
+1050   2                                      adc_buffer[12]+adc_buffer[38]+
+1051   2                                      adc_buffer[10]+adc_buffer[40]+
+1052   2                                      adc_buffer[8]+adc_buffer[42]+
+1053   2                                      adc_buffer[6]+adc_buffer[44]+
+1054   2                                      adc_buffer[4]+adc_buffer[46]+
+1055   2                                      adc_buffer[2]+adc_buffer[48]+
+1056   2                                      adc_buffer[0]+adc_buffer[50])/26);
+1057   2              }
+1058   1          //---------------------------------------------------------------------------------------           
+1059   1              for(i=0;i<N;i++)
+1060   1              {
+1061   2                  set_ADCEN;
+1062   2                                      
+1063   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1064   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1065   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1066   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1067   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1068   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1069   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1070   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1071   2                              delay_1us();  //µÈ´ý²ÉÑùÊ±¼ä
+1072   2                                              
+1073   2                              clr_ADCF;
+1074   2      
+1075   2                              set_ADCS;  //Æô¶¯AD×ª»»
+1076   2              
+1077   2                              while(ADCF==0);
+1078   2                              clr_ADCF;
+1079   2              
+1080   2                              adc_buffer[i]=(unsigned int)(ADCRH<<4)+(ADCRL&0x0f);      //¶ÁÈ¡×ª»»½á¹û
+1081   2                  
+1082   2                  clr_ADCEN;
+1083   2              }
+1084   1              
+1085   1              for(j=0;j<N-1;j++)
+1086   1              {
+1087   2                      for(i=0;i<N-j;i++)
+1088   2                      {
+1089   3                              if(adc_buffer[i]>adc_buffer[i+1])
+1090   3                              {
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 19  
+
+1091   4                                      temp=adc_buffer[i];
+1092   4                                      
+1093   4                                      adc_buffer[i]=adc_buffer[i+1];
+1094   4      
+1095   4                                      adc_buffer[i+1]=temp;
+1096   4                              }                       
+1097   3      
+1098   3                      }
+1099   2              }
+1100   1              
+1101   1              clr_ADCEN;
+1102   1              
+1103   1              return((adc_buffer[((N-1)/2)-1]+adc_buffer[((N-1)/2)+1])/2);
+1104   1              
+1105   1                                              
+1106   1      }
+1107                          
+1108          
+1109          
+1110          
+1111          /**********************************************************************
+1112          *º¯ÊýÃû³Æ£ºhandle_task_process
+1113          *ÃèÊö£ºÏµÍ³ÈÎÎñµ÷¶È´¦Àí
+1114          *·µ»ØÀàÐÍ£ºvoid
+1115          *ÊäÈëÐÎ²Î£ºvoid
+1116          ***********************************************************************/                
+1117          void handle_task_process(void)
+1118          {
+1119   1              
+1120   1              
+1121   1              if(handle_short_flag==0x01)  //¶ÌÂ·±£»¤
+1122   1              {
+1123   2                      over_load_time_count=0x00;
+1124   2                                                      
+1125   2                      load_voltage_status=0x01;
+1126   2                      
+1127   2                      handle_short_flag=0x00;
+1128   2                      
+1129   2                      discharge_led_status=0x00;
+1130   2                                                      
+1131   2                      while(1); //µÈ´ýÏµÍ³¸´Î»
+1132   2              }
+1133   1              
+1134   1              if(work_mode==0x00)//-----------------Õý³£¹¤×÷Ä£Ê½£¨×Ô¶¯Ä£Ê½£©
+1135   1              {
+1136   2                      if((pv_voltage_status==0x01)&&(battery_voltage_status==0x01)&&(sys_temper_flag==0x01))
+1137   2                      {
+1138   3                                                                                      
+1139   3                              system_status = SYSTEM_CHARGE_STATUS;           
+1140   3                                                                      
+1141   3                      }
+1142   2                      else if((pv_voltage_status==0x02)&&(battery_voltage_status==0x01)&&(sys_temper_flag==0x01))
+1143   2                      {
+1144   3                      
+1145   3                              system_status = SYSTEM_DISCHARGE_STATUS;
+1146   3                              
+1147   3                      }
+1148   2                      else
+1149   2                      {
+1150   3                              system_status = SYSTEM_NOP_STATUS;
+1151   3                      }       
+1152   2              }
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 20  
+
+1153   1              else if(work_mode==0x01)  //---------------ÊÖ¶¯³äµçÄ£Ê½
+1154   1              {
+1155   2                      system_status = SYSTEM_CHARGE_STATUS;
+1156   2              }
+1157   1              else if(work_mode==0x02)  //---------------ÊÖ¶¯·ÅµçÄ£Ê½
+1158   1              {
+1159   2                      system_status = SYSTEM_DISCHARGE_STATUS;
+1160   2              }
+1161   1              else
+1162   1              {
+1163   2                      system_status = SYSTEM_NOP_STATUS;
+1164   2              }
+1165   1              
+1166   1              
+1167   1              switch(system_status)
+1168   1              {
+1169   2                      case SYSTEM_NOP_STATUS:      
+1170   2                                                                      if(nop_index==0x00)
+1171   2                                                                      {
+1172   3                                          bt_led_status=0x00;
+1173   3                                                                      
+1174   3                                          charge_led_status=0x00;
+1175   3                                                                                  
+1176   3                                          discharge_led_status=0x00;
+1177   3                                                                                                                                                              
+1178   3      //                                                                      battery_voltage_value=start_ad_convert(AN3_CHANNEL);       //20181206 ÐÞ¸Ä¹ý ÐÏ
+1179   3      //                                                                      if(battery_voltage_value>=((12.70/31.04)*819.2))                   //     Õâ¶Î
+1180   3      //                                                                      {                                                                                                                 //
+1181   3      //                                                                              delay_ms(1000);                                                                           //
+1182   3      //                                                                              battery_voltage_value=start_ad_convert(AN3_CHANNEL);  //
+1183   3      //                                                                              if(battery_voltage_value>=((12.70/31.04)*819.2))         //
+1184   3      //                                                                              {                                                                                                       //
+1185   3      //                                                CHARGE_OFF;                                                                      //
+1186   3      //                                                                              }                                                                                                //
+1187   3      //
+1188   3      //                                                                      }                                                                                                        //20181206 ÐÞ¸Ä¹ý ÐÏ                                   
+1189   3      //                                    CHARGE_OFF;
+1190   3                                                                              CHARGE_OFF;                                                                                     
+1191   3                                          Disable_Bost_Pwm();
+1192   3                                                      
+1193   3                                          Set_Bost_Pwm_Duty(0);
+1194   3                                                                      
+1195   3                                          LOAD_OUT_DISABLE;                                                                                                                                                                                                                                   
+1196   3                                                                      
+1197   3                                          bost_pwm_value=0;
+1198   3                                                                      
+1199   3                                          PWM =10;
+1200   3      
+1201   3                                                                      
+1202   3                                          pid_init ( &PID_CC_discharge);
+1203   3                                                                                                                                  
+1204   3                                          //·ÅµçºãÁ÷PIDµ÷½Ú
+1205   3                                          PID_CC_discharge.Proportion = 0.001;    // ±ÈÀý³£Êý Proportional Const
+1206   3                                                                              
+1207   3                                          PID_CC_discharge.Integral   = 0.;   // »ý·Ö³£Êý Integral Const
+1208   3                                                                                                                
+             -                                              
+1209   3                                          PID_CC_discharge.Derivative = 0;    // Î¢·Ö³£Êý Derivative Const
+1210   3                                                                                                                
+             -                                              
+1211   3                                          PID_CC_discharge.SetPoint   = ((load_cc_I*150)/1000)*819.2;         // Éè¶
+             -¨Ä¿±ê Desired value  
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 21  
+
+1212   3                                                                                  
+1213   3                                          open_discharge_time=0x00;
+1214   3                                                                      
+1215   3                                          ms_cnt=0x00;                                                
+1216   3                                          se_cnt=0x00;                                                
+1217   3                                          mi_cnt=0x00;                                                
+1218   3                                          ho_cnt=0x00;
+1219   3                                          limit_power_pid_flag=0x00;
+1220   3                                          Adjust_Pout_Flag=0x00;
+1221   3                                          voltage_adjust_index=0x01;
+1222   3                                                                                  
+1223   3                                          nop_index=0x01;
+1224   3                                                                                          
+1225   3                                          discharge_index=0x00;
+1226   3                                                                                          
+1227   3                                          charge_index=0x00;
+1228   3                                      }
+1229   2                                                                                                                                                                                                                                                                                                              
+1230   2                                  break;
+1231   2                      
+1232   2                      case SYSTEM_CHARGE_STATUS:      
+1233   2                                      if(charge_index==0x01)
+1234   2                                      {
+1235   3                                                                      
+1236   3                                                                              discharge_led_status=0x01;                                                                                                                                                                                                                                                                      
+1237   3                                                                              Disable_Bost_Pwm();                                                                                     
+1238   3                                                                              Set_Bost_Pwm_Duty(0);                                                                                   
+1239   3                                                                              LOAD_OUT_DISABLE;                                                                                                                                                                               
+1240   3                                                                              CHARGE_OFF;                                                                                                                                     
+1241   3                                                                              open_discharge_time=0x00;                                                                                       
+1242   3                                                                              ms_cnt=0x00;                                            
+1243   3                                                                              se_cnt=0x00;                                            
+1244   3                                                                              mi_cnt=0x00;                                            
+1245   3                                                                              ho_cnt=0x00;
+1246   3                                                                              limit_power_pid_flag=0x00;
+1247   3                                                                              Adjust_Pout_Flag=0x00;
+1248   3                                                                              voltage_adjust_index=0x01;                                                                                      
+1249   3                                                                              nop_index=0x00;                                                                                 
+1250   3                                                                              discharge_index=0x00;                                                                                   
+1251   3                                                                              charge_index=0x02;                                                                                                                                                                              
+1252   3                                                                      
+1253   3                                      }
+1254   2                                      break;
+1255   2                      
+1256   2                      case SYSTEM_DISCHARGE_STATUS:
+1257   2                                                                                                                                                      
+1258   2                                                                      if(discharge_index==0)
+1259   2                                                                      {
+1260   3                                                                                              
+1261   3                                          charge_led_status=0x01;
+1262   3                                                              
+1263   3                                          CHARGE_OFF;                                                                                                                                                                                 
+1264   3                                                                                                                                                      
+1265   3                                          LOAD_OUT_DISABLE;
+1266   3                                                              
+1267   3                                          Disable_Bost_Pwm();
+1268   3                                                                                  
+1269   3                                          PWM =10;
+1270   3                                                                                  
+1271   3                                          bost_pwm_value=10;
+1272   3                                                                          
+1273   3                                          Set_Bost_Pwm_Duty(bost_pwm_value); 
+C51 COMPILER V9.01   TASK                                                                  03/26/2019 10:13:41 PAGE 22  
+
+1274   3                                                      
+1275   3                                          pid_init ( &PID_CC_discharge);              //³õÊ¼»¯PID¿ØÖÆ²ÎÊý
+1276   3                                                              
+1277   3                                                              
+1278   3                                          PID_CC_discharge.Proportion = 0.001;        // ±ÈÀý³£Êý Proportional Const
+1279   3      
+1280   3                                          PID_CC_discharge.Integral   = 0;            // »ý·Ö³£Êý Integral Const
+1281   3                                                                              
+1282   3                                          PID_CC_discharge.Derivative = 0;            // Î¢·Ö³£Êý Derivative Const
+1283   3                                                                              
+1284   3                                          PID_CC_discharge.SetPoint   = ((load_cc_I*150)/1000)*819.2;         // Éè¶¨
+             -Ä¿±ê Desired value 
+1285   3                                                                              
+1286   3                                          open_discharge_time=0x00;
+1287   3                                                                              
+1288   3                                          ms_cnt=0x00;                                                
+1289   3                                          se_cnt=0x00;                                                
+1290   3                                          mi_cnt=0x00;                                                
+1291   3                                          ho_cnt=0x00;
+1292   3                                                                              
+1293   3                                          limit_power_pid_flag=0x00;
+1294   3                                          Adjust_Pout_Flag=0x00;
+1295   3                                          voltage_adjust_index=0x01;          
+1296   3                                                                                                                
+             -                                                  
+1297   3                                          nop_index=0x00;
+1298   3                                                                                  
+1299   3                                          discharge_index=0x01;
+1300   3                                                                                  
+1301   3                                          charge_index=0x00;
+1302   3                                                                                                      
+1303   3                                                                      }
+1304   2                                      
+1305   2                                                                      break;
+1306   2                      
+1307   2                      default:break;
+1308   2              
+1309   2              }
+1310   1              
+1311   1      
+1312   1      }
+1313          
+1314          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   7040    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     96       8
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

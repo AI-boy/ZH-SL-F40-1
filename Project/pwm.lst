@@ -1,0 +1,154 @@
+C51 COMPILER V9.01   PWM                                                                   03/26/2019 10:13:41 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE PWM
+OBJECT MODULE PLACED IN ..\User\obj\pwm.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\User\src\pwm.c LARGE BROWSE INCDIR(..\FwLib\Include;..\User\inc) DEFINE(
+                    -FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\pwm.lst) OBJECT(..\User\obj\pwm.obj)
+
+line level    source
+
+   1           
+   2           
+   3          #include "N76E003.h"
+   4          #include "SFR_Macro.h"
+   5          #include "Function_define.h"
+   6          #include "Common.h"
+   7          #include "stdio.h"
+   8          #include "string.h"
+   9          
+  10          
+  11          #include "userdefine.h"
+  12          
+  13          
+  14          
+  15          
+  16          unsigned int bost_pwm_value=0x00;
+  17          
+  18          
+  19          
+  20          
+  21          
+  22          
+  23          /**********************************************************************
+  24          *函数名称：init_pwm
+  25          *描述： CH3   PA3  BOST_PWM
+  26          *返回类型：void
+  27          *输入形参：void
+  28          ***********************************************************************/
+  29          void init_pwm(void)
+  30          {
+  31   1          P15_Input_Mode;                     //P1.5  初始化设置为输入状态 禁止PWM输出
+  32   1      
+  33   1              PWM_CLOCK_FSYS;                         //PWM时钟源为系统时钟FSYS 16MHz
+  34   1      
+  35   1              PWM5_P15_OUTPUT_ENABLE;         // PWM5 输出引脚选择P15
+  36   1      
+  37   1              PWM_IMDEPENDENT_MODE;           //PWM 独立输出模式
+  38   1      
+  39   1              PWM5_OUTPUT_NORMAL;                     //PWM 输出极性正常输出
+  40   1      
+  41   1              PWM_EDGE_TYPE;                          //PWM 对齐模式 边沿对齐
+  42   1      
+  43   1              PWMPH = 0x03;                           //PWM 周期设置 PWM时钟频率默认系统频率Fsys=16MHz
+  44   1              PWMPL = 0xFF;                           //Fpwm=16000000/(0x3ff+1)=15.625 khz  10位分辨率
+  45   1      
+  46   1              set_CLRPWM;                                     //清除16位PWM计数器
+  47   1      
+  48   1              set_SFRPAGE;                        //PWM4 and PWM5 duty seting is in SFP page 1        
+  49   1              PWM5H = 0x00;                           //SFR 特殊功能寄存器在页0 页1           
+  50   1              PWM5L = 0x00;
+  51   1              clr_SFRPAGE;    
+  52   1      
+  53   1              set_LOAD;                               //更新PWM周期及占空比设定值
+  54   1      
+C51 COMPILER V9.01   PWM                                                                   03/26/2019 10:13:41 PAGE 2   
+
+  55   1              clr_PWMF;               
+  56   1      }
+  57          
+  58          /**********************************************************************
+  59          *函数名称：enable_bost_pwm
+  60          *描述：开启BOST PWM
+  61          *返回类型：void
+  62          *输入形参：void
+  63          ***********************************************************************/
+  64          void Enable_Bost_Pwm(void)
+  65          {
+  66   1          P15_PushPull_Mode;
+  67   1      
+  68   1              clr_P15;
+  69   1        
+  70   1          set_PWMRUN; //开启PWM 
+  71   1      }
+  72          
+  73          
+  74          
+  75          /**********************************************************************
+  76          *函数名称：disable_bost_pwm
+  77          *描述:关闭BOST PWM
+  78          *返回类型：void
+  79          *输入形参：void
+  80          ***********************************************************************/
+  81          void Disable_Bost_Pwm(void)
+  82          {
+  83   1          P15_Input_Mode;
+  84   1              
+  85   1          clr_PWMRUN;
+  86   1      
+  87   1              P15_Input_Mode;
+  88   1      
+  89   1              //P15=0;
+  90   1      }
+  91          
+  92          
+  93          /**********************************************************************
+  94          *函数名称：set_bost_pwm_duty
+  95          *描述：设置BOST PWM占空比
+  96          *返回类型：void
+  97          *输入形参：void
+  98          ***********************************************************************/
+  99          void Set_Bost_Pwm_Duty(unsigned int dduty)     
+ 100          {       
+ 101   1          bost_pwm_value=dduty;
+ 102   1      
+ 103   1              
+ 104   1          if(dduty<=BOST_PWM_MAX)  
+ 105   1          {
+ 106   2              set_SFRPAGE;                                                    //PWM4 and PWM5 duty seting is in SFP page 1    
+ 107   2                      PWM5H = (unsigned char)((dduty>>8)&0x03);       //PWM 占空比高2位                                               
+ 108   2                      PWM5L = (unsigned char)dduty;                           //PWM 占空比低8位
+ 109   2                      clr_SFRPAGE;            
+ 110   2          }
+ 111   1          else
+ 112   1          {
+ 113   2              dduty=BOST_PWM_MAX;
+ 114   2                  
+ 115   2              set_SFRPAGE;                            
+ 116   2                      PWM5H = (unsigned char)((dduty>>8)&0x03);                                       
+C51 COMPILER V9.01   PWM                                                                   03/26/2019 10:13:41 PAGE 3   
+
+ 117   2                      PWM5L = (unsigned char)dduty;
+ 118   2                      clr_SFRPAGE;            
+ 119   2          }
+ 120   1      
+ 121   1              set_LOAD;               //更新PWM占空比数值
+ 122   1      
+ 123   1      }
+ 124          
+ 125          
+ 126                          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    230    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      2    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

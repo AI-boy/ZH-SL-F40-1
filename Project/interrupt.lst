@@ -1,0 +1,409 @@
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE INTERRUPT
+OBJECT MODULE PLACED IN ..\User\obj\interrupt.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\User\src\interrupt.c LARGE BROWSE INCDIR(..\FwLib\Include;..\User\inc) D
+                    -EFINE(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\interrupt.lst) OBJECT(..\User\obj\interrupt.obj)
+
+line level    source
+
+   1          
+   2          #include "N76E003.h"
+   3          #include "SFR_Macro.h"
+   4          #include "Function_define.h"
+   5          #include "Common.h"
+   6          #include "stdio.h"
+   7          #include "string.h"
+   8          
+   9          
+  10          #include "userdefine.h"
+  11          
+  12          
+  13          
+  14          unsigned char   open_discharge_time=0x00;                       //放电时长定时器
+  15          unsigned int    ms_cnt=0x00;                                            //毫秒
+  16          unsigned int    se_cnt=0x00;                                            //秒
+  17          unsigned int    mi_cnt=0x00;                                            //分
+  18          unsigned int    ho_cnt=0x00;                                            //时
+  19          
+  20          unsigned char   open_an0_time=0x00;                             //AN0 通道采样周期定时器
+  21          unsigned int    an0_time_count=0x00;                            
+  22          unsigned char   handle_an0_process_flag=0x00;
+  23          
+  24          
+  25          unsigned char   open_an1_time=0x00;                             //AN1 通道采样周期定时器
+  26          unsigned int    an1_time_count=0x00;                            
+  27          unsigned char   handle_an1_process_flag=0x00;
+  28          
+  29          
+  30          unsigned char   open_an2_time=0x00;                             //AN2 通道采样周期定时器
+  31          unsigned int    an2_time_count=0x00;                            
+  32          unsigned char   handle_an2_process_flag=0x00;
+  33          
+  34          
+  35          unsigned char   open_an3_time=0x00;                             //AN3 通道采样周期定时器
+  36          unsigned int    an3_time_count=0x00;                            
+  37          unsigned char   handle_an3_process_flag=0x00;
+  38          
+  39          
+  40          unsigned char   open_an4_time=0x00;                             //AN4 通道采样周期定时器
+  41          unsigned int    an4_time_count=0x00;                            
+  42          unsigned char   handle_an4_process_flag=0x00;
+  43          
+  44          
+  45          unsigned char   open_an9_time=0x00;                             //AN9 通道采样周期定时器
+  46          unsigned int    an9_time_count=0x00;                            
+  47          unsigned char   handle_an9_process_flag=0x00;
+  48          
+  49          
+  50          unsigned char   open_an10_time=0x00;                            //AN10 通道采样周期定时器
+  51          unsigned int    an10_time_count=0x00;                           
+  52          unsigned char   handle_an10_process_flag=0x00;
+  53          
+  54          unsigned char   handle_short_flag=0x00;
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 2   
+
+  55          
+  56          unsigned  int   time_cnt=0x00;
+  57          
+  58          
+  59          /**********************************************************************
+  60          *函数名称：PinInterrupt_ISR
+  61          *描述：管脚中断
+  62          *返回类型：void
+  63          *输入形参：void
+  64          ***********************************************************************/
+  65          void PinInterrupt_ISR(void) interrupt 7 //管脚中断 中断号：7
+  66          {
+  67   1              if(PIF!=0x00)    //端口引脚中断
+  68   1              {
+  69   2                      if(PIF&0x02) //过流保护
+  70   2                      {
+  71   3                              handle_short_flag=0x01;
+  72   3                                              
+  73   3                      discharge_index=0x03;
+  74   3                              
+  75   3                      LOAD_OUT_DISABLE;
+  76   3                                                                                              
+  77   3                              bost_pwm_value=2;
+  78   3                                                                      
+  79   3                              Set_Bost_Pwm_Duty(bost_pwm_value);
+  80   3                                                                      
+  81   3                              Disable_Bost_Pwm();
+  82   3                                      
+  83   3                              clr_PIF1;
+  84   3                      }
+  85   2      
+  86   2                      if(PIF&0x04) //遥控器红外接收
+  87   2                      {
+  88   3                              //unsigned   int   time_cnt;
+  89   3        
+  90   3                          ird_receive_time_count=150;//100ms超时时间
+  91   3                          
+  92   3                          if((receive_bit_count<32)&&(ird_receive_flag==0x00))
+  93   3                          {
+  94   4                                if(ird_status==0x00)
+  95   4                                {
+  96   5                                    ird_status=0x01;
+  97   5                                    
+  98   5                                    clr_TR1;   //停止计数 
+  99   5                                                             
+ 100   5                                        TL1=0x00;
+ 101   5                                                TH1=0x00;             
+ 102   5                                                              
+ 103   5                                    set_TR1;                         
+ 104   5                                    
+ 105   5                                    system_time_count=0x00;             
+ 106   5                                    
+ 107   5                                }
+ 108   4                                else if(ird_status==0x01)
+ 109   4                                {
+ 110   5                                                      clr_TR1;   //停止计数
+ 111   5                                      time_cnt=(unsigned int)(TH1<<8)+TL1;
+ 112   5                                      TL1=0x00;
+ 113   5                                                      TH1=0x00;
+ 114   5      
+ 115   5                                      if((time_cnt>10000)&&(time_cnt<30000))  //13.5ms 通信起始周期
+ 116   5                                      {
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 3   
+
+ 117   6                                          receive_bit_count=0x00; //数据计数清零
+ 118   6                                            
+ 119   6                                          ird_data=0x00;
+ 120   6      
+ 121   6                                                              clr_TR1;   //停止计数
+ 122   6                                          TL1=0x00;
+ 123   6                                                              TH1=0x00;
+ 124   6                                                              set_TR1;
+ 125   6                                                              clr_TF1;
+ 126   6                                       
+ 127   6                                      }
+ 128   5                                      else if((time_cnt>500)&&(time_cnt<=2000)) //数据 ‘0’  0.5ms--1.5ms
+ 129   5                                      {
+ 130   6                                          receive_bit_count++;
+ 131   6                                          
+ 132   6                                          ird_data=ird_data<<1;
+ 133   6      
+ 134   6                                                              clr_TR1;   //停止计数
+ 135   6                                          TL1=0x00;
+ 136   6                                                              TH1=0x00;
+ 137   6                                                              set_TR1;
+ 138   6                                                              clr_TF1;
+ 139   6                                          
+ 140   6                                      }
+ 141   5                                      else if((time_cnt>2000)&&(time_cnt<4000)) //数据 ‘1’  1.5ms--3ms
+ 142   5                                      {
+ 143   6                                          receive_bit_count++;
+ 144   6                                          
+ 145   6                                          ird_data=(ird_data<<1)+1;
+ 146   6      
+ 147   6                                                              clr_TR1;   //停止计数
+ 148   6                                          TL1=0x00;
+ 149   6                                                              TH1=0x00;
+ 150   6                                                              set_TR1;
+ 151   6                                                              clr_TF1;
+ 152   6                                          
+ 153   6                                      }
+ 154   5                                                      
+ 155   5                                }
+ 156   4                          }
+ 157   3      
+ 158   3                              clr_PIF2;
+ 159   3                      }
+ 160   2      
+ 161   2                      PIF=0x00;  //----!!!
+ 162   2              }
+ 163   1      
+ 164   1      }
+ 165          
+ 166          /**********************************************************************
+ 167          *函数名称：Timer3_ISR
+ 168          *描述：系统时基中断     1ms
+ 169          *返回类型：void
+ 170          *输入形参：void
+ 171          ***********************************************************************/
+ 172          void Timer3_ISR (void) interrupt 16 
+ 173          {
+ 174   1              clr_TF3;
+ 175   1      
+ 176   1              //------------------------------------------------------------  
+ 177   1          if(system_check_time==0x01)
+ 178   1          {
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 4   
+
+ 179   2              system_time_count++;
+ 180   2              
+ 181   2              if(system_time_count>800)
+ 182   2              {
+ 183   3                  system_time_count=0x00;           
+ 184   3                  
+ 185   3                  if(have_person1_flag==0x01)
+ 186   3                  {
+ 187   4                      have_person1_time_count++;
+ 188   4                                                                        
+ 189   4                      if(have_person1_time_count>20)
+ 190   4                      {
+ 191   5                          have_person1_time_count=0x00;
+ 192   5                                                                                
+ 193   5                          have_person1_flag=0x00;
+ 194   5                      }
+ 195   4                      
+ 196   4                  }
+ 197   3                  
+ 198   3               } 
+ 199   2       
+ 200   2              scan_key_time_count++;
+ 201   2              
+ 202   2              if(scan_key_time_count>=40)    //50ms扫描按键
+ 203   2              {
+ 204   3                  scan_key_time_count=0x00;
+ 205   3                                                                
+ 206   3                  handle_scan_key_flag=0x01;
+ 207   3              }
+ 208   2       
+ 209   2          }
+ 210   1          //------------------------------------------------------------放电阶段时长控制
+ 211   1          if(open_discharge_time==0x01)
+ 212   1          {
+ 213   2              if(ms_cnt<1000)
+ 214   2                      {
+ 215   3                      ms_cnt++;
+ 216   3                      }
+ 217   2              else
+ 218   2                      {
+ 219   3                  ms_cnt=0x00;
+ 220   3                                                              
+ 221   3                  if(se_cnt<60)
+ 222   3                  {
+ 223   4                                      se_cnt++;       //----1秒
+ 224   4                  }
+ 225   3                  else
+ 226   3                  {
+ 227   4                                      se_cnt=0x00;
+ 228   4                                                                      
+ 229   4                                      if(mi_cnt<60)
+ 230   4                                      {
+ 231   5                          mi_cnt++;  //-----1分钟
+ 232   5                                      }
+ 233   4                                      else
+ 234   4                                      {
+ 235   5                          mi_cnt=0x00;
+ 236   5                                                                              
+ 237   5                          if(ho_cnt<24)
+ 238   5                          {
+ 239   6                                                      ho_cnt++; //----1小时
+ 240   6                          }
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 5   
+
+ 241   5                          else
+ 242   5                          {
+ 243   6                                                      ho_cnt=0x00;
+ 244   6                          }
+ 245   5                                      }
+ 246   4                   }
+ 247   3               }
+ 248   2          }
+ 249   1          //------------------------------------------------------------
+ 250   1          if(open_an0_time==0x01) //AN0 通道采样周期定时器  1s  内部温度检测
+ 251   1          {
+ 252   2                      an0_time_count++;
+ 253   2                                                      
+ 254   2                      if(an0_time_count>=1000)
+ 255   2                      {
+ 256   3                  an0_time_count=0x00;
+ 257   3                                                              
+ 258   3                  handle_an0_process_flag=0x01;
+ 259   3                      }
+ 260   2                                                      
+ 261   2          }
+ 262   1          if(open_an1_time==0x01)     //AN1 通道采样周期定时器   1s 温度检测
+ 263   1          {
+ 264   2                      an1_time_count++;
+ 265   2                                                      
+ 266   2                      if(an1_time_count>=1000)
+ 267   2                      {
+ 268   3                  an1_time_count=0x00;
+ 269   3                                                              
+ 270   3                  handle_an1_process_flag=0x01;
+ 271   3                      }
+ 272   2                                                      
+ 273   2          }
+ 274   1          if(open_an2_time==0x01) //AN2 通道采样周期定时器  5ms  光伏电压
+ 275   1          {
+ 276   2                      an2_time_count++;
+ 277   2                                                      
+ 278   2                      if(an2_time_count>=5)
+ 279   2                      {
+ 280   3                  an2_time_count=0x00;
+ 281   3                                                              
+ 282   3                  handle_an2_process_flag=0x01;
+ 283   3                      }
+ 284   2                                                      
+ 285   2          }
+ 286   1                                              
+ 287   1          if(open_an3_time==0x01) //AN3 通道采样周期定时器  5ms  电池电压检测
+ 288   1          {
+ 289   2                      an3_time_count++;
+ 290   2                                                      
+ 291   2                      if(an3_time_count>=5)
+ 292   2                      {
+ 293   3                  an3_time_count=0x00;
+ 294   3                                                              
+ 295   3                  handle_an3_process_flag=0x01;
+ 296   3                      }
+ 297   2                                                      
+ 298   2          }
+ 299   1                                                                              
+ 300   1                                              
+ 301   1          if(open_an9_time==0x01) //AN9 通道采样周期定时器   5ms 充电电流  
+ 302   1          {
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 6   
+
+ 303   2                      an9_time_count++;
+ 304   2                                                      
+ 305   2                      if(an9_time_count>=5)
+ 306   2                      {
+ 307   3                  an9_time_count=0x00;
+ 308   3                                                                                                                                                              
+ 309   3                  handle_an9_process_flag=0x01;                                                                                                       
+ 310   3                      }
+ 311   2                                                      
+ 312   2          }
+ 313   1                                              
+ 314   1          if(open_an4_time==0x01) //AN4 通道采样周期定时器  5ms 输出端电压 
+ 315   1          {
+ 316   2                      an4_time_count++;
+ 317   2                                                      
+ 318   2                      if(an4_time_count>=5)
+ 319   2                      {
+ 320   3                  an4_time_count=0x00;
+ 321   3                                                              
+ 322   3                  handle_an4_process_flag=0x01;
+ 323   3                      }
+ 324   2                                                      
+ 325   2          }
+ 326   1                                              
+ 327   1          if(open_an10_time==0x01) //AN10 通道采样周期定时器  5ms  放电电流
+ 328   1          {
+ 329   2                      an10_time_count++;
+ 330   2                                                      
+ 331   2                      if(an10_time_count>=2)
+ 332   2                      {
+ 333   3                  an10_time_count=0x00;
+ 334   3                                                              
+ 335   3                  handle_an10_process_flag=0x01;
+ 336   3                      }
+ 337   2                                                      
+ 338   2          }
+ 339   1           
+ 340   1          //-----------------------------------
+ 341   1          if(ird_receive_time_count>0)
+ 342   1          {
+ 343   2              ird_receive_time_count--;
+ 344   2                            
+ 345   2              if(ird_receive_time_count==0x00)
+ 346   2              {
+ 347   3                  if(receive_bit_count==32)
+ 348   3                  {
+ 349   4                      ird_receive_flag=0x01;
+ 350   4                                    
+ 351   4                                      receive_bit_count=0x00;
+ 352   4                  }
+ 353   3                  else
+ 354   3                  {
+ 355   4                                      receive_bit_count=0x00;
+ 356   4                                    
+ 357   4                      ird_status=0x00;
+ 358   4                                    
+ 359   4                                      clr_TR1;   //停止计数
+ 360   4                      
+ 361   4                          TL1=0x00;
+ 362   4                                      TH1=0x00;//定时器清零    
+ 363   4                                                      
+ 364   4                          clr_TF1;                  
+C51 COMPILER V9.01   INTERRUPT                                                             03/26/2019 10:13:38 PAGE 7   
+
+ 365   4                                    
+ 366   4                  }
+ 367   3              }
+ 368   2          }
+ 369   1      
+ 370   1                  
+ 371   1      }
+ 372          
+ 373          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1107    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     40    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

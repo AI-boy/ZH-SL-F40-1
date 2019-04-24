@@ -1,0 +1,3 @@
+Project	:ZH-SL-F40-1
+MCU	:N76E003AT20
+Designer	:caiweikai

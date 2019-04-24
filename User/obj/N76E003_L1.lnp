@@ -1,0 +1,15 @@
+"..\User\obj\STARTUP.obj",
+"..\User\obj\adc.obj",
+"..\User\obj\interrupt.obj",
+"..\User\obj\ird_remote.obj",
+"..\User\obj\led.obj",
+"..\User\obj\main.obj",
+"..\User\obj\PID.obj",
+"..\User\obj\pwm.obj",
+"..\User\obj\task.obj",
+"..\User\obj\timer.obj",
+"..\User\obj\udelay.obj",
+"..\User\obj\Common.obj",
+"..\User\obj\Delay.obj" 
+TO "..\User\obj\N76E003_L1" 
+PRINT(".\N76E003_L1.m51") RAMSIZE(256) 

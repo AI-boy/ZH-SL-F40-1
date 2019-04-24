@@ -1,0 +1,84 @@
+C51 COMPILER V9.01   UDELAY                                                                03/26/2019 10:13:41 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE UDELAY
+OBJECT MODULE PLACED IN ..\User\obj\udelay.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\User\src\udelay.c LARGE BROWSE INCDIR(..\FwLib\Include;..\User\inc) DEFI
+                    -NE(FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\udelay.lst) OBJECT(..\User\obj\udelay.obj)
+
+line level    source
+
+   1          
+   2          
+   3          //**--------------头文件-------------------------------------------------------
+   4          #include "N76E003.h"
+   5          #include "SFR_Macro.h"
+   6          #include "Function_define.h"
+   7          #include "Common.h"
+   8          #include "stdio.h"
+   9          #include "string.h"
+  10          
+  11          
+  12          #include "userdefine.h"
+  13          
+  14          
+  15          
+  16          
+  17          void delay_1us(void) // 延时1us，因为系统时钟是16MHZ，一条指令时间是1/16M * 16 = 1 us
+  18          {
+  19   1              nop(); // 0.125us
+  20   1              nop(); // 0.125us
+  21   1              nop(); // 0.125us
+  22   1              nop(); // 0.125us
+  23   1              nop(); // 0.125us
+  24   1              nop(); // 0.125us
+  25   1              nop(); // 0.125us
+  26   1              nop(); // 0.125us
+  27   1              nop(); // 0.125us
+  28   1              nop(); // 0.125us
+  29   1              nop(); // 0.125us
+  30   1              nop(); // 0.125us
+  31   1              nop(); // 0.125us
+  32   1              nop(); // 0.125us
+  33   1              nop(); // 0.125us
+  34   1              nop(); // 0.125us
+  35   1      }
+  36          
+  37          
+  38          
+  39          void delay_ms(unsigned short count)
+  40          {
+  41   1              unsigned short i, j;
+  42   1              
+  43   1              for (i = 0; i < count; i++)
+  44   1              {
+  45   2              for (j = 0; j < 2000; j++)
+  46   2              {
+  47   3                      nop(); // 0.125us
+  48   3                              nop(); // 0.125us
+  49   3                              nop(); // 0.125us
+  50   3                              nop(); // 0.125us
+  51   3                              nop(); // 0.125us
+  52   3                              nop(); // 0.125us
+  53   3                              nop(); // 0.125us
+  54   3                              nop(); // 0.125us           
+C51 COMPILER V9.01   UDELAY                                                                03/26/2019 10:13:41 PAGE 2   
+
+  55   3              }
+  56   2                      set_WDCLR;// 喂狗 
+  57   2              }
+  58   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     76    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

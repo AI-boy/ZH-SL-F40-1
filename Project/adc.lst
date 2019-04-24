@@ -1,0 +1,85 @@
+C51 COMPILER V9.01   ADC                                                                   03/26/2019 10:13:37 PAGE 1   
+
+
+C51 COMPILER V9.01, COMPILATION OF MODULE ADC
+OBJECT MODULE PLACED IN ..\User\obj\adc.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\User\src\adc.c LARGE BROWSE INCDIR(..\FwLib\Include;..\User\inc) DEFINE(
+                    -FOSC_160000) DEBUG OBJECTEXTEND PRINT(.\adc.lst) OBJECT(..\User\obj\adc.obj)
+
+line level    source
+
+   1           
+   2          #include "N76E003.h"
+   3          #include "SFR_Macro.h"
+   4          #include "Function_define.h"
+   5          #include "Common.h"
+   6          #include "stdio.h"
+   7          #include "string.h"
+   8          
+   9          
+  10          #include "userdefine.h"
+  11          
+  12          
+  13          
+  14          
+  15          
+  16          unsigned int temperature_value=0x00;            //环境温度
+  17          
+  18          unsigned int pv_voltage_value=0x00;             //光伏板电压
+  19          
+  20          unsigned int battery_voltage_value=0x00;        //电池电压
+  21          
+  22          unsigned int load_voltage_value=0x00;           //输出电压
+  23          
+  24          unsigned int charge_current_value=0x00;         //充电电流
+  25          
+  26          unsigned int discharge_current_value=0x00;      //放电电流
+  27          
+  28          
+  29          unsigned int adc_buffer[64];
+  30          
+  31          
+  32          
+  33          
+  34          /**********************************************************************
+  35          *函数名称：init_adc
+  36          *描述：初始化AD采样端口
+  37          *返回类型：void
+  38          *输入形参：void
+  39          ***********************************************************************/
+  40          
+  41          void init_adc(void)
+  42          {
+  43   1         
+  44   1          
+  45   1          P06_Input_Mode;                //AIN3---AN1   温度采样
+  46   1              
+  47   1          P07_Input_Mode;            //AIN2---AN2   光伏板电压采样
+  48   1                                                                 
+  49   1          P03_Input_Mode;            //AIN6---AN3(AN12)  电池电压采样
+  50   1              
+  51   1          P04_Input_Mode;            //AIN5---AN4   输出电压采样
+  52   1          
+  53   1          P11_Input_Mode;            //AIN7---AN10  放电电流 采样
+  54   1          
+C51 COMPILER V9.01   ADC                                                                   03/26/2019 10:13:37 PAGE 2   
+
+  55   1              Disable_ADC;
+  56   1          
+  57   1          clr_ADCF;
+  58   1              
+  59   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     36    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    140    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
